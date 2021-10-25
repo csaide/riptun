@@ -1,7 +1,7 @@
 # (c) Copyright 2021 Christian Saide
 # SPDX-License-Identifier: MIT
 
-name: Rust
+name: linux
 
 on:
   push:
@@ -20,6 +20,7 @@ env:
 
 jobs:
   test-linux:
+    name: check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -37,6 +38,7 @@ jobs:
         run: make check
 
   coverage-linux:
+    name: coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -65,7 +67,7 @@ jobs:
           path: cobertura.xml
 
   build-linux:
-    name: build-linux (arm/aarch64/x86_64)
+    name: build (arm/aarch64/x86_64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
