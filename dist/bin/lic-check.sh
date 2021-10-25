@@ -17,6 +17,7 @@ function list_files_missing_lic() {
         -not -name LICENSE \
         -not -name README.md \
         -not -name rust-toolchain \
+        -not -name codecov.yaml \
         -not -name '*.json' \
         -not -name '*.lock' \
         -not -name '*.toml' \
@@ -42,6 +43,7 @@ function list_files_missing_copy() {
         -not -name .dockerignore \
         -not -name LICENSE \
         -not -name rust-toolchain \
+        -not -name codecov.yaml \
         -not -name '*.json' \
         -not -name '*.lock' \
         -not -name '*.toml' \

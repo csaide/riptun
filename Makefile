@@ -44,7 +44,7 @@ devel: check $(DEFAULT_COMPILE_ACTION) $(DEFAULT_EXAMPLES_ACTION)
 # Binary compilation steps.
 ###
 
-.PHONY: docs compile examples full
+.PHONY: docs compile examples full compile.linux compile.windows compile.darwin examples.linux examples.windows examples.darwin
 
 docs:
 	@bash ./dist/bin/print.sh "Generating Docs"
@@ -58,31 +58,39 @@ examples.%:
 	@cargo build --target $(target_$*) --features async-tokio-fd-example --example tokio
 	@cargo build --target $(target_$*) --example sync
 
-examples: \
+examples.linux: \
 	examples.linux-amd64 \
 	examples.linux-arm64 \
 	examples.linux-arm
-# TODO(csaide): Disabled for now need to fix cross platform TLS builds.
-#
-# examples.windows-amd64 \
-# examples.windows-arm64 \
-# examples.darwin-amd64 \
-# examples.darwin-arm64
+
+examples.windows: \
+	examples.windows-amd64 \
+	examples.windows-arm64
+
+examples.darwin: \
+	examples.darwin-amd64 \
+	examples.darwin-arm64
+
+examples: examples.$(DEFAULT_OS)
 
 compile.%:
 	@bash ./dist/bin/print.sh "Building target: '$*' mode: '$(BUILD)'"
 	@cargo build $(build_$(BUILD)) --target $(target_$*)
 
-compile: \
+compile.linux: \
 	compile.linux-amd64 \
 	compile.linux-arm64 \
 	compile.linux-arm
-# TODO(csaide): Disabled for now need to fix cross platform TLS builds.
-#
-# compile.windows-amd64 \
-# compile.windows-arm64 \
-# compile.darwin-amd64 \
-# compile.darwin-arm64
+
+compile.windows: \
+	compile.windows-amd64 \
+	compile.windows-arm64
+
+compile.darwin: \
+	compile.darwin-amd64 \
+	compile.darwin-arm64
+
+compile: compile.$(DEFAULT_OS)
 
 full: compile examples
 
