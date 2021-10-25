@@ -64,7 +64,8 @@ jobs:
           name: code-coverage-report
           path: cobertura.xml
 
-  build:
+  build-linux:
+    name: Build Linux (arm/aarch64/x86_64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -75,8 +76,9 @@ jobs:
           profile: ${{ env.TOOLCHAIN_PROFILE }}
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           override: true
-          components: rustfmt, clippy
+      - name: Install compilers
+        run: suto apt-get install -yqq gcc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
       - name: Cache
         uses: Swatinem/rust-cache@v1
       - name: Build
-        run: make compile.linux-amd64
+        run: make compile
