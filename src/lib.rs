@@ -10,10 +10,10 @@ mod error;
 mod queue;
 
 pub use error::{Error, Result};
-pub use queue::{Dev, Fd};
+pub use queue::{Fd, Tun};
 
 #[cfg(feature = "async-std-fd")]
-pub use queue::{AsyncStdDev, AsyncStdFd};
+pub use queue::{AsyncStdFd, AsyncStdTun};
 
 #[cfg(feature = "async-tokio-fd")]
-pub use queue::{TokioDev, TokioFd};
+pub use queue::{TokioFd, TokioTun};

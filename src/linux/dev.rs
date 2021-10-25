@@ -1,23 +1,18 @@
 // (c) Copyright 2021 Christian Saide
 // SPDX-License-Identifier: MIT
 
-use std::ops::RangeBounds;
+use std::ops::{Index, IndexMut, RangeBounds};
 use std::vec::Drain;
 use std::{io, slice::Iter};
 
-use super::{Error, Fd, IfReq, Result};
-
-pub trait DeviceQueue: Sized {
-    fn open(req: &IfReq) -> Result<Self>;
-    fn close(&mut self) -> Result<()>;
-}
+use super::{Closer, Error, Fd, IfReq, Opener, Result};
 
 /// A named virtual device comprised of one or more virutal queues.
 pub struct Device<T>(pub(super) Vec<T>);
 
 impl<T> Device<T>
 where
-    T: DeviceQueue,
+    T: Opener + Closer,
 {
     /// Create a new set of queues for a device.
     pub fn new(name: &str, num_queues: usize) -> Result<(Self, String)> {
@@ -63,27 +58,28 @@ where
     }
 }
 
-impl DeviceQueue for Fd {
-    #[inline]
-    fn open(req: &IfReq) -> Result<Self> {
-        Self::open(req)
+impl<T> Index<usize> for Device<T> {
+    type Output = T;
+    fn index(&self, index: usize) -> &T {
+        &self.0[index]
     }
+}
 
-    #[inline]
-    fn close(&mut self) -> Result<()> {
-        self.close().map_err(|err| err.into())
+impl<T> IndexMut<usize> for Device<T> {
+    fn index_mut(&mut self, index: usize) -> &mut T {
+        &mut self.0[index]
     }
 }
 
 /// A synchronous virtual TUN device.
-pub type Dev = Device<Fd>;
+pub type Tun = Device<Fd>;
 
-impl Dev {
-    pub fn send(&self, queue: usize, datagram: &[u8]) -> io::Result<usize> {
+impl Tun {
+    pub fn send_via(&self, queue: usize, datagram: &[u8]) -> io::Result<usize> {
         self.get(queue).map_err(|err| err.into_io())?.send(datagram)
     }
 
-    pub fn recv(&self, queue: usize, datagram: &mut [u8]) -> io::Result<usize> {
+    pub fn recv_via(&self, queue: usize, datagram: &mut [u8]) -> io::Result<usize> {
         self.get(queue).map_err(|err| err.into_io())?.recv(datagram)
     }
 }

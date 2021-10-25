@@ -7,22 +7,10 @@ use std::io;
 
 use futures_util::future::select_all;
 
-impl DeviceQueue for AsyncStdFd {
-    #[inline]
-    fn open(req: &IfReq) -> Result<Self> {
-        Self::open(req)
-    }
-
-    #[inline]
-    fn close(&mut self) -> Result<()> {
-        self.close().map_err(|err| err.into())
-    }
-}
-
 /// An asynchronous virtual TUN device based on the async-std/async-io ecosystem.
-pub type AsyncStdDev = Device<AsyncStdFd>;
+pub type AsyncStdTun = Device<AsyncStdFd>;
 
-impl AsyncStdDev {
+impl AsyncStdTun {
     /// Send a packet asynchronously to an available queue.
     pub async fn send(&self, datagram: &[u8]) -> io::Result<usize> {
         loop {

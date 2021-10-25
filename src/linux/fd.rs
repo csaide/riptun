@@ -5,10 +5,11 @@ use nix::{fcntl::OFlag, libc};
 
 use std::{
     io::{self, Read, Write},
+    mem::MaybeUninit,
     os::unix::prelude::{AsRawFd, RawFd},
 };
 
-use super::{req, Error, Result};
+use super::{req, Closer, Error, Opener, Result};
 
 const PATH: &[u8] = b"/dev/net/tun\0";
 
@@ -32,22 +33,6 @@ impl AsRawFd for Fd {
 }
 
 impl Fd {
-    pub(super) fn open(req: &req::IfReq) -> Result<Self> {
-        let fd = unsafe { libc::open(PATH.as_ptr() as *const libc::c_char, libc::O_RDWR) };
-        if fd < 0 {
-            return Err(Error::FS {
-                path: unsafe { String::from_utf8_unchecked(PATH.to_vec()) },
-                source: io::Error::from_raw_os_error(nix::errno::errno()),
-            });
-        }
-
-        let ret = unsafe { create_queue(fd, req as *const req::IfReq as PointerWidth)? };
-        if ret >= 1 {
-            return Err(Error::from(ret as i32));
-        }
-        Ok(Self(fd))
-    }
-
     /// Either enable or disable non-blocking mode on the underlying file descriptor.
     pub fn set_non_blocking(&self, on: bool) -> Result<()> {
         let flags =
@@ -65,18 +50,6 @@ impl Fd {
             .map_err(Error::from)
     }
 
-    /// Close the internal file descriptor, this detaches the queue from the virtual device, and then
-    /// closes the underlying descriptor.
-    pub fn close(&mut self) -> io::Result<()> {
-        let ret = unsafe { libc::close(self.0) };
-        if ret < 0 {
-            Err(Error::errno().into_io())
-        } else {
-            self.0 = -1;
-            Ok(())
-        }
-    }
-
     /// Write the datagram to the underlying file descriptor injecting the data into the hosts networking
     /// stack.
     pub fn send(&self, datagram: &[u8]) -> io::Result<usize> {
@@ -87,7 +60,7 @@ impl Fd {
         };
 
         if written < 0 {
-            Err(Error::errno().into_io())
+            Err(io::Error::last_os_error())
         } else {
             Ok(written as usize)
         }
@@ -103,7 +76,22 @@ impl Fd {
         };
 
         if read < 0 {
-            Err(Error::errno().into_io())
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(read as usize)
+        }
+    }
+    /// Read data from the underlying file descriptor into the supplied datagram, reading data from the hosts networking
+    /// stack, using uninitialized memory.
+    pub fn recv_uninit(&self, datagram: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
+        let count = datagram.len();
+        let read = unsafe {
+            let ptr = datagram.as_mut_ptr();
+            libc::read(self.0, ptr as *mut libc::c_void, count)
+        };
+
+        if read < 0 {
+            Err(io::Error::last_os_error())
         } else {
             Ok(read as usize)
         }
@@ -127,5 +115,35 @@ impl Write for Fd {
     fn flush(&mut self) -> std::io::Result<()> {
         // TUN queues are character devices under the hood no flushing needed.
         Ok(())
+    }
+}
+
+impl Opener for Fd {
+    fn open(req: &req::IfReq) -> Result<Self> {
+        let fd = unsafe { libc::open(PATH.as_ptr() as *const libc::c_char, libc::O_RDWR) };
+        if fd < 0 {
+            return Err(Error::FS {
+                path: unsafe { String::from_utf8_unchecked(PATH.to_vec()) },
+                source: io::Error::last_os_error(),
+            });
+        }
+
+        let ret = unsafe { create_queue(fd, req as *const req::IfReq as PointerWidth)? };
+        if ret >= 1 {
+            return Err(Error::from(ret as i32));
+        }
+        Ok(Self(fd))
+    }
+}
+
+impl Closer for Fd {
+    fn close(&mut self) -> Result<()> {
+        let ret = unsafe { libc::close(self.0) };
+        if ret < 0 {
+            Err(Error::errno())
+        } else {
+            self.0 = -1;
+            Ok(())
+        }
     }
 }

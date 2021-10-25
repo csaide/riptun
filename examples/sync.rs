@@ -3,12 +3,12 @@
 
 use std::{sync::Arc, thread};
 
-use riptun::Dev;
+use riptun::Tun;
 
 const NUM_QUEUES: usize = 5;
 
 pub fn main() {
-    let (async_dev, name) = match Dev::new("rip%d", NUM_QUEUES) {
+    let (async_dev, name) = match Tun::new("rip%d", NUM_QUEUES) {
         Ok(async_dev) => async_dev,
         Err(err) => {
             println!("[ERROR] => {}", err);
@@ -25,7 +25,7 @@ pub fn main() {
         let handle = thread::spawn(move || {
             let mut buffer: [u8; 65535] = [0x00; 65535];
             loop {
-                let read = match handle_dev.recv(queue, &mut buffer) {
+                let read = match handle_dev.recv_via(queue, &mut buffer) {
                     Ok(read) => read,
                     Err(err) => {
                         println!("[ERROR][Queue: {}] => {}", queue, err);

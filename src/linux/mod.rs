@@ -9,10 +9,18 @@ mod dev;
 mod fd;
 mod req;
 
-pub use dev::Dev;
-use dev::{Device, DeviceQueue};
+use dev::Device;
+pub use dev::Tun;
 pub use fd::Fd;
 use req::IfReq;
+
+pub trait Opener: Sized {
+    fn open(req: &IfReq) -> Result<Self>;
+}
+
+pub trait Closer: Sized {
+    fn close(&mut self) -> Result<()>;
+}
 
 cfg_if! {
     if #[cfg(feature = "async-std-fd")] {
@@ -21,7 +29,7 @@ cfg_if! {
         #[path = "async_dev/std.rs"]
         mod async_std_dev;
 
-        pub use async_std_dev::AsyncStdDev;
+        pub use async_std_dev::AsyncStdTun;
         pub use async_std_fd::AsyncStdFd;
     }
 }
@@ -33,7 +41,7 @@ cfg_if! {
         #[path = "async_dev/tokio.rs"]
         mod async_tokio_dev;
 
-        pub use async_tokio_dev::TokioDev;
+        pub use async_tokio_dev::TokioTun;
         pub use async_tokio_fd::TokioFd;
     }
 }

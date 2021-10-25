@@ -1,7 +1,7 @@
 // (c) Copyright 2021 Christian Saide
 // SPDX-License-Identifier: MIT
 
-use super::{Fd, IfReq, Result};
+use super::{Closer, Fd, IfReq, Opener, Result};
 
 use std::io;
 use std::pin::Pin;
@@ -14,26 +14,17 @@ use futures_io::{AsyncRead, AsyncWrite};
 pub struct AsyncStdFd(Async<Fd>);
 
 impl AsyncStdFd {
-    // Open a new non-blocking async Queue
-    pub(super) fn open(req: &IfReq) -> Result<Self> {
-        let queue = Fd::open(req)?;
-        let async_fd = Async::new(queue)?;
-        Ok(Self(async_fd))
-    }
-
-    /// Close the underlying queue.
-    pub fn close(&mut self) -> io::Result<()> {
-        self.0.get_mut().close()
-    }
-
-    pub(super) async fn readable<'a>(&'a self) -> io::Result<()> {
+    #[inline]
+    pub(super) async fn readable(&self) -> io::Result<()> {
         self.0.readable().await
     }
 
-    pub(super) async fn writable<'a>(&'a self) -> io::Result<()> {
+    #[inline]
+    pub(super) async fn writable(&self) -> io::Result<()> {
         self.0.writable().await
     }
 
+    #[inline]
     pub(super) fn get_ref(&self) -> &Fd {
         self.0.get_ref()
     }
@@ -59,9 +50,9 @@ impl AsyncWrite for AsyncStdFd {
         inner.poll_write(cx, buf)
     }
 
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        let inner = Pin::new(&mut self.get_mut().0);
-        inner.poll_flush(cx)
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        // Flushing is a no-op on a char device.
+        Poll::Ready(Ok(()))
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -78,5 +69,19 @@ impl AsyncRead for AsyncStdFd {
     ) -> std::task::Poll<io::Result<usize>> {
         let inner = Pin::new(&mut self.get_mut().0);
         inner.poll_read(cx, buf)
+    }
+}
+
+impl Opener for AsyncStdFd {
+    fn open(req: &IfReq) -> Result<Self> {
+        let queue = Fd::open(req)?;
+        let async_fd = Async::new(queue)?;
+        Ok(Self(async_fd))
+    }
+}
+
+impl Closer for AsyncStdFd {
+    fn close(&mut self) -> Result<()> {
+        self.0.get_mut().close()
     }
 }

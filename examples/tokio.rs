@@ -3,13 +3,13 @@
 
 use std::sync::Arc;
 
-use riptun::TokioDev;
+use riptun::TokioTun;
 
 const NUM_QUEUES: usize = 5;
 
 #[tokio::main]
 pub async fn main() {
-    let (async_dev, name) = match TokioDev::new("rip%d", NUM_QUEUES) {
+    let (async_dev, name) = match TokioTun::new("rip%d", NUM_QUEUES) {
         Ok(async_dev) => async_dev,
         Err(err) => {
             println!("[ERROR] => {}", err);

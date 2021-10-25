@@ -17,24 +17,13 @@ use tokio::io::{AsyncRead, AsyncWrite};
 pub struct TokioFd(AsyncFd<Fd>);
 
 impl TokioFd {
-    // Open a new non-blocking async Queue
-    pub(super) fn open(req: &req::IfReq) -> Result<Self> {
-        let queue = Fd::open(req)?;
-        queue.set_non_blocking(true)?;
-        let async_fd = AsyncFd::new(queue)?;
-        Ok(Self(async_fd))
-    }
-
-    /// Close the underlying queue.
-    pub fn close(&mut self) -> io::Result<()> {
-        self.0.get_mut().close()
-    }
-
-    pub(super) async fn readable<'a>(&'a self) -> io::Result<AsyncFdReadyGuard<'a, Fd>> {
+    #[inline]
+    pub(super) async fn readable(&self) -> io::Result<AsyncFdReadyGuard<'_, Fd>> {
         self.0.readable().await
     }
 
-    pub(super) async fn writable<'a>(&'a self) -> io::Result<AsyncFdReadyGuard<'a, Fd>> {
+    #[inline]
+    pub(super) async fn writable(&self) -> io::Result<AsyncFdReadyGuard<'_, Fd>> {
         self.0.writable().await
     }
 
@@ -81,7 +70,7 @@ impl AsyncWrite for TokioFd {
     }
 
     fn poll_shutdown(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        self.0.get_mut().close()?;
+        self.0.get_mut().close().map_err(|err| err.into_io())?;
         Poll::Ready(Ok(()))
     }
 }
@@ -94,9 +83,11 @@ impl AsyncRead for TokioFd {
     ) -> Poll<io::Result<()>> {
         loop {
             let mut guard = ready!(self.0.poll_read_ready(cx))?;
-            match guard.try_io(|queue| queue.get_ref().recv(datagram.initialize_unfilled())) {
+            let unfilled = unsafe { datagram.unfilled_mut() };
+            match guard.try_io(|queue| queue.get_ref().recv_uninit(unfilled)) {
                 Ok(res) => match res {
                     Ok(read) => {
+                        unsafe { datagram.assume_init(read) };
                         datagram.advance(read);
                         return Poll::Ready(Ok(()));
                     }
@@ -105,5 +96,20 @@ impl AsyncRead for TokioFd {
                 Err(_) => continue,
             }
         }
+    }
+}
+
+impl Opener for TokioFd {
+    fn open(req: &IfReq) -> Result<Self> {
+        let queue = Fd::open(req)?;
+        queue.set_non_blocking(true)?;
+        let async_fd = AsyncFd::new(queue)?;
+        Ok(Self(async_fd))
+    }
+}
+
+impl Closer for TokioFd {
+    fn close(&mut self) -> Result<()> {
+        self.0.get_mut().close()
     }
 }

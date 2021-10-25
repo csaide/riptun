@@ -43,10 +43,8 @@ RUN useradd -s /bin/bash -d /home/code -u ${uid} -U -G sudo code \
     && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Copy in a custom bashrc with util functions.
-COPY dist/docker/development/.bashrc /home/code/
+COPY --chown=code:code dist/docker/development/.bashrc /home/code/
 # Copy in our custom rust configuration.
-COPY dist/docker/development/config /usr/local/cargo/config
-
-RUN chmod 666 /usr/local/cargo/config
+COPY --chown=code:code dist/docker/development/config /usr/local/cargo/config
 
 WORKDIR /opt/riptun

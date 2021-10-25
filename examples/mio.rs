@@ -1,7 +1,7 @@
 // (c) Copyright 2021 Christian Saide
 // SPDX-License-Identifier: MIT
 
-use riptun::{Dev, Fd};
+use riptun::{Fd, Tun};
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut poll = Poll::new()?;
     let mut events = Events::with_capacity(128);
 
-    let (mut sync, name) = match Dev::new("rip%d", NUM_QUEUES) {
+    let (mut sync, name) = match Tun::new("rip%d", NUM_QUEUES) {
         Ok(sync) => sync,
         Err(err) => return Err(Box::new(err)),
     };

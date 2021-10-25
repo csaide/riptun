@@ -1,13 +1,13 @@
 // (c) Copyright 2021 Christian Saide
 // SPDX-License-Identifier: MIT
 
-use riptun::AsyncStdDev;
+use riptun::AsyncStdTun;
 
 const NUM_QUEUES: usize = 5;
 
 #[async_std::main]
 pub async fn main() {
-    let (async_dev, name) = match AsyncStdDev::new("rip%d", NUM_QUEUES) {
+    let (async_dev, name) = match AsyncStdTun::new("rip%d", NUM_QUEUES) {
         Ok(async_dev) => async_dev,
         Err(err) => {
             println!("[ERROR] => {}", err);
