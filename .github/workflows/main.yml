@@ -19,7 +19,7 @@ env:
   TOOLCHAIN_PROFILE: minimal
 
 jobs:
-  test:
+  test-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -36,7 +36,7 @@ jobs:
       - name: Check
         run: make check
 
-  coverage:
+  coverage-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -65,7 +65,7 @@ jobs:
           path: cobertura.xml
 
   build-linux:
-    name: Build Linux (arm/aarch64/x86_64)
+    name: build-linux (arm/aarch64/x86_64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
