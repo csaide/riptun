@@ -77,7 +77,7 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           override: true
       - name: Install compilers
-        run: suto apt-get install -yqq gcc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+        run: sudo apt-get install -yqq gcc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
       - name: Cache
         uses: Swatinem/rust-cache@v1
       - name: Build
