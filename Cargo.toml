@@ -1,0 +1,62 @@
+[package]
+name = "riptun"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Generic required dependencies.
+cfg-if = "1.0.0"
+nix = "0.23.0"
+thiserror = "1.0.28"
+
+# Async specific dependencies, see the features bellow to determine when they are included.
+async-io = { version = "1.0.1", optional = true }
+futures-util = { version = "0.3.17", optional = true }
+futures-io = { version = "0.3.17", optional = true }
+mio = { version = "0.7", optional = true, default-features = false, features = ["os-ext"] }
+tokio = { version = "1.12.0", optional = true, default-features = false, features = ["net"] }
+
+# Example only dependencies, these are never included in the final library builds.
+async-std = { version = "1.10.0", optional = true }
+smol = { version = "1.2.5", optional = true }
+
+
+[features]
+# Default feature set is to enable all async capabilities.
+default = ["async-mio-fd", "async-std-fd", "async-tokio-fd"]
+
+# Enable/disable individual
+async-mio-fd = ["mio"]
+async-std-fd = ["async-io", "futures-util", "futures-io"]
+async-tokio-fd = ["tokio", "futures-util", "futures-io"]
+
+async-std-fd-example = ["async-std/attributes", "async-std/default", "async-std-fd", ]
+async-tokio-fd-example = ["tokio/full", "async-tokio-fd"]
+async-smol-fd-example = ["smol", "async-std-fd"]
+
+[[example]]
+name = "sync"
+path = "examples/sync.rs"
+required-features = []
+
+[[example]]
+name = "mio"
+path = "examples/mio.rs"
+required-features = ["async-mio-fd"]
+
+[[example]]
+name = "smol"
+path = "examples/smol.rs"
+required-features = ["async-smol-fd-example"]
+
+[[example]]
+name = "std"
+path = "examples/std.rs"
+required-features = ["async-std-fd-example"]
+
+[[example]]
+name = "tokio"
+path = "examples/tokio.rs"
+required-features = ["async-tokio-fd-example"]
