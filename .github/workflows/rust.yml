@@ -18,20 +18,20 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-      steps:
-        - name: Checkout sources
-          uses: actions/checkout@v2
-        - name: Install toolchain
-          uses: actions-rs/toolchain@v1
-          with:
-            profile: ${{ env.TOOLCHAIN_PROFILE }}
-            toolchain: ${{ env.RUST_TOOLCHAIN }}
-            override: true
-            components: rustfmt, clippy
-        - name: Cache
-          uses: Swatinem/rust-cache@v1
-        - name: Check
-          run: make check
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: ${{ env.TOOLCHAIN_PROFILE }}
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          override: true
+          components: rustfmt, clippy
+      - name: Cache
+        uses: Swatinem/rust-cache@v1
+      - name: Check
+        run: make check
 
   coverage:
     runs-on: ubuntu-latest
