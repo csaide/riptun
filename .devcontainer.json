@@ -1,0 +1,51 @@
+{
+    "build": {
+        "dockerfile": "./dist/docker/development/Dockerfile",
+        "context": ".",
+    },
+    "runArgs": [
+        "--cap-add=SYS_PTRACE",
+        "--cap-add=NET_ADMIN",
+        "--cap-add=NET_RAW",
+        "--security-opt",
+        "seccomp=unconfined"
+    ],
+    "mounts": [
+        // We also want to make sure we bind in the local gnupg home directory.
+        "type=bind,src=${localEnv:HOME}/.gnupg,dst=/home/code/.gnupg",
+        // We also want to make sure we bind in the local ssh home directory.
+        "type=bind,src=${localEnv:HOME}/.ssh,dst=/home/code/.ssh"
+    ],
+    "containerUser": "code",
+    "remoteUser": "code",
+    "workspaceMount": "source=${localEnv:DEV_ROOT}/riptun,target=/opt/riptun,type=bind,consistency=cached",
+    "workspaceFolder": "/opt/riptun",
+    "extensions": [
+        "matklad.rust-analyzer",
+        "ms-azuretools.vscode-docker",
+        "eriklynd.json-tools",
+        "zxh404.vscode-proto3",
+        "bungcip.better-toml",
+        "vadimcn.vscode-lldb",
+        "mutantdino.resourcemonitor"
+    ],
+    "settings": {
+        "rust-analyzer.inlayHints.enable": false,
+        "rust-analyzer.diagnostics.disabled": [
+            "unresolved-import",
+            "unresolved-macro-call"
+        ],
+        "rust-analyzer.updates.askBeforeDownload": false,
+        "rust-analyzer.cargo.target": "x86_64-unknown-linux-gnu",
+        "rust-analyzer.runnables.cargoExtraArgs": [
+            "--target",
+            "x86_64-unknown-linux-gnu"
+        ],
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "lldb.executable": "/usr/bin/lldb",
+        // VS Code don't watch files under ./target
+        "files.watcherExclude": {
+            "**/target/**": true
+        }
+    }
+}
