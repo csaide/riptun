@@ -16,19 +16,20 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/*
 
 # Add our rust utils and nightly toolchain.
-RUN rustup component add rustfmt \
-    && rustup component add clippy \
-    && rustup component add rust-src \
-    && cargo install cargo-tarpaulin \
-    && rustup target add x86_64-unknown-linux-gnu \
+RUN rustup target add x86_64-unknown-linux-gnu \
     && rustup target add aarch64-unknown-linux-gnu \
     && rustup target add armv7-unknown-linux-gnueabihf \
+    && rustup target add arm-unknown-linux-gnueabihf \
     # TODO(csaide): Disabled for now need to fix cross platform builds.
     #
     # && rustup target add x86_64-pc-windows-msvc \
     # && rustup target add aarch64-pc-windows-msvc \
     # && rustup target add x86_64-apple-darwin \
     # && rustup target add aarch64-apple-darwin \
+    && rustup component add rustfmt --toolchain stable \
+    && rustup component add clippy --toolchain stable \
+    && rustup component add rust-src --toolchain stable \
+    && cargo install cargo-tarpaulin \
     && rustup update
 
 # Install rust-analyzer
@@ -44,7 +45,5 @@ RUN useradd -s /bin/bash -d /home/code -u ${uid} -U -G sudo code \
 
 # Copy in a custom bashrc with util functions.
 COPY --chown=code:code dist/docker/development/.bashrc /home/code/
-# Copy in our custom rust configuration.
-COPY --chown=code:code dist/docker/development/config /usr/local/cargo/config
 
 WORKDIR /opt/riptun

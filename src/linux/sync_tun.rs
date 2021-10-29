@@ -5,7 +5,7 @@ use std::ops::{Index, IndexMut, RangeBounds};
 use std::vec::Drain;
 use std::{io, slice::Iter};
 
-use super::{Closer, Error, Fd, IfReq, Opener, Result};
+use super::{Closer, Error, IfReq, Opener, Queue, Result};
 
 /// A named virtual device comprised of one or more virutal queues.
 pub struct Device<T>(pub(super) Vec<T>);
@@ -37,6 +37,8 @@ where
         }
     }
 
+    /// Close the device destroying all internal queues.
+    /// NOTE: If `drain` is called its on the caller to cleanup the queues.
     pub fn close(&mut self) -> Result<()> {
         for mut queue in self.drain(..) {
             queue.close()?;
@@ -44,6 +46,9 @@ where
         Ok(())
     }
 
+    /// Drain the internal queues, passing ownership of the queue and its lifecycle
+    /// to the caller. This is useful in certain scenarios where extreme control over
+    /// threading and I/O operations is needed/wanted.
     #[inline]
     pub fn drain<R>(&mut self, range: R) -> Drain<T>
     where
@@ -52,6 +57,8 @@ where
         self.0.drain(range)
     }
 
+    /// Iterate over the internal queues exposing the ability to interact with the internal
+    /// queues without taking ownership like `drain`.
     #[inline]
     pub fn iter(&self) -> Iter<T> {
         self.0.iter()
@@ -72,13 +79,15 @@ impl<T> IndexMut<usize> for Device<T> {
 }
 
 /// A synchronous virtual TUN device.
-pub type Tun = Device<Fd>;
+pub type Tun = Device<Queue>;
 
 impl Tun {
+    /// Send a packet via the specified TUN queue.
     pub fn send_via(&self, queue: usize, datagram: &[u8]) -> io::Result<usize> {
         self.get(queue).map_err(|err| err.into_io())?.send(datagram)
     }
 
+    /// Read a packet off the specified TUN queue.
     pub fn recv_via(&self, queue: usize, datagram: &mut [u8]) -> io::Result<usize> {
         self.get(queue).map_err(|err| err.into_io())?.recv(datagram)
     }

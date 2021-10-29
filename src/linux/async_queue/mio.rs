@@ -1,7 +1,7 @@
 // (c) Copyright 2021 Christian Saide
 // SPDX-License-Identifier: MIT
 
-use super::Fd;
+use super::Queue;
 
 use std::io;
 use std::os::unix::io::AsRawFd;
@@ -9,7 +9,7 @@ use std::os::unix::io::AsRawFd;
 use mio::unix::SourceFd;
 use mio::{event, Interest, Registry, Token};
 
-impl event::Source for Fd {
+impl event::Source for Queue {
     fn register(
         &mut self,
         registry: &Registry,

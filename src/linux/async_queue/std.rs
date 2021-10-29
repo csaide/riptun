@@ -1,7 +1,7 @@
 // (c) Copyright 2021 Christian Saide
 // SPDX-License-Identifier: MIT
 
-use super::{Closer, Fd, IfReq, Opener, Result};
+use super::{Closer, IfReq, Opener, Queue, Result};
 
 use std::io;
 use std::pin::Pin;
@@ -10,10 +10,10 @@ use std::task::{Context, Poll};
 use async_io::Async;
 use futures_io::{AsyncRead, AsyncWrite};
 
-/// An async wrapper around the [Fd] object.
-pub struct AsyncStdFd(Async<Fd>);
+/// An async wrapper around the [Queue] object leveraging the [async_io] ecosystem.
+pub struct AsyncStdQueue(Async<Queue>);
 
-impl AsyncStdFd {
+impl AsyncStdQueue {
     #[inline]
     pub(super) async fn readable(&self) -> io::Result<()> {
         self.0.readable().await
@@ -25,7 +25,7 @@ impl AsyncStdFd {
     }
 
     #[inline]
-    pub(super) fn get_ref(&self) -> &Fd {
+    pub(super) fn get_ref(&self) -> &Queue {
         self.0.get_ref()
     }
 
@@ -40,7 +40,7 @@ impl AsyncStdFd {
     }
 }
 
-impl AsyncWrite for AsyncStdFd {
+impl AsyncWrite for AsyncStdQueue {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -61,7 +61,7 @@ impl AsyncWrite for AsyncStdFd {
     }
 }
 
-impl AsyncRead for AsyncStdFd {
+impl AsyncRead for AsyncStdQueue {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -72,15 +72,15 @@ impl AsyncRead for AsyncStdFd {
     }
 }
 
-impl Opener for AsyncStdFd {
+impl Opener for AsyncStdQueue {
     fn open(req: &IfReq) -> Result<Self> {
-        let queue = Fd::open(req)?;
+        let queue = Queue::open(req)?;
         let async_fd = Async::new(queue)?;
         Ok(Self(async_fd))
     }
 }
 
-impl Closer for AsyncStdFd {
+impl Closer for AsyncStdQueue {
     fn close(&mut self) -> Result<()> {
         self.0.get_mut().close()
     }

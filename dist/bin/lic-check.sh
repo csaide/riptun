@@ -5,6 +5,7 @@
 
 function list_files_missing_lic() {
     find . \
+        -not -path './.cargo/*' \
         -not -path './target/*' \
         -not -path './.git/*' \
         -not -path './.vscode/*' \
@@ -32,6 +33,7 @@ function count_files_missing_lic() {
 
 function list_files_missing_copy() {
     find . \
+        -not -path './.cargo/*' \
         -not -path './target/*' \
         -not -path './.git/*' \
         -not -path './.vscode/*' \
