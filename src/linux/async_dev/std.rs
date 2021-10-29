@@ -8,7 +8,7 @@ use std::io;
 use futures_util::future::select_all;
 
 /// An asynchronous virtual TUN device based on the async-std/async-io ecosystem.
-pub type AsyncStdTun = Device<AsyncStdFd>;
+pub type AsyncStdTun = Device<AsyncStdQueue>;
 
 impl AsyncStdTun {
     /// Send a packet asynchronously to an available queue.

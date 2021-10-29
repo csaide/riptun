@@ -5,14 +5,13 @@ use super::{Error, Result};
 
 use cfg_if::cfg_if;
 
-mod dev;
-mod fd;
 mod req;
+mod sync_queue;
+mod sync_tun;
 
-use dev::Device;
-pub use dev::Tun;
-pub use fd::Fd;
 use req::IfReq;
+pub use sync_queue::Queue;
+pub use sync_tun::{Device, Tun};
 
 pub trait Opener: Sized {
     fn open(req: &IfReq) -> Result<Self>;
@@ -24,31 +23,31 @@ pub trait Closer: Sized {
 
 cfg_if! {
     if #[cfg(feature = "async-std-fd")] {
-        #[path = "async_fd/std.rs"]
-        mod async_std_fd;
+        #[path = "async_queue/std.rs"]
+        mod async_std_queue;
         #[path = "async_dev/std.rs"]
         mod async_std_dev;
 
         pub use async_std_dev::AsyncStdTun;
-        pub use async_std_fd::AsyncStdFd;
+        pub use async_std_queue::AsyncStdQueue;
     }
 }
 
 cfg_if! {
     if #[cfg(feature = "async-tokio-fd")] {
-        #[path = "async_fd/tokio.rs"]
-        mod async_tokio_fd;
+        #[path = "async_queue/tokio.rs"]
+        mod async_tokio_queue;
         #[path = "async_dev/tokio.rs"]
         mod async_tokio_dev;
 
         pub use async_tokio_dev::TokioTun;
-        pub use async_tokio_fd::TokioFd;
+        pub use async_tokio_queue::TokioQueue;
     }
 }
 
 cfg_if! {
     if #[cfg(feature = "async-mio-fd")] {
-        #[path = "async_fd/mio.rs"]
-        pub mod async_fd;
+        #[path = "async_queue/mio.rs"]
+        pub mod async_queue;
     }
 }

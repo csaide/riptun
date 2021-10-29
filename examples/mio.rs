@@ -1,7 +1,7 @@
 // (c) Copyright 2021 Christian Saide
 // SPDX-License-Identifier: MIT
 
-use riptun::{Fd, Tun};
+use riptun::{Queue, Tun};
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("[INFO] => Created new virtual device: {}", name);
 
-    let mut queues: HashMap<Token, Fd> = HashMap::with_capacity(NUM_QUEUES);
+    let mut queues: HashMap<Token, Queue> = HashMap::with_capacity(NUM_QUEUES);
     for (idx, mut queue) in sync.drain(..).enumerate() {
         queue.set_non_blocking(true)?;
         let token = Token(idx);
