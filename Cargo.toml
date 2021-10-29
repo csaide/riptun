@@ -1,7 +1,18 @@
 [package]
 name = "riptun"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
+description = "riptun is a cross platform library for creating, managing, and leveraging both sync and async TUN/TAP devices."
+license = "MIT"
+repository = "https://github.com/csaide/riptun"
+authors = ["Christian Saide"]
+exclude = [
+    ".github/*",
+    "dist/*",
+    ".dockerignore",
+    ".devcontainer.json",
+    "codecov.yaml",
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -22,16 +33,16 @@ tokio = { version = "1.12.0", optional = true, default-features = false, feature
 async-std = { version = "1.10.0", optional = true }
 smol = { version = "1.2.5", optional = true }
 
-
 [features]
 # Default feature set is to enable all async capabilities.
 default = ["async-mio-fd", "async-std-fd", "async-tokio-fd"]
 
-# Enable/disable individual
+# Enable/disable individual async implementations.
 async-mio-fd = ["mio"]
 async-std-fd = ["async-io", "futures-util", "futures-io"]
 async-tokio-fd = ["tokio", "futures-util", "futures-io"]
 
+# Strictly for examples.
 async-std-fd-example = ["async-std/attributes", "async-std/default", "async-std-fd", ]
 async-tokio-fd-example = ["tokio/full", "async-tokio-fd"]
 async-smol-fd-example = ["smol", "async-std-fd"]

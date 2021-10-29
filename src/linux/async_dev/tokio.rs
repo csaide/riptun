@@ -8,7 +8,7 @@ use std::io;
 use futures_util::future::select_all;
 
 /// An asynchronous virtual TUN device based on the tokio ecosystem.
-pub type TokioTun = Device<TokioFd>;
+pub type TokioTun = Device<TokioQueue>;
 
 impl TokioTun {
     /// Send a packet asynchronously to an available queue.

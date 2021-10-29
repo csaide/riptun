@@ -13,17 +13,17 @@ use tokio::io::unix::AsyncFdReadyGuard;
 use tokio::io::ReadBuf;
 use tokio::io::{AsyncRead, AsyncWrite};
 
-/// An async wrapper around the [Fd] object.
-pub struct TokioFd(AsyncFd<Fd>);
+/// An async wrapper around the [Queue] object leveraging the [tokio] ecosystem.
+pub struct TokioQueue(AsyncFd<Queue>);
 
-impl TokioFd {
+impl TokioQueue {
     #[inline]
-    pub(super) async fn readable(&self) -> io::Result<AsyncFdReadyGuard<'_, Fd>> {
+    pub(super) async fn readable(&self) -> io::Result<AsyncFdReadyGuard<'_, Queue>> {
         self.0.readable().await
     }
 
     #[inline]
-    pub(super) async fn writable(&self) -> io::Result<AsyncFdReadyGuard<'_, Fd>> {
+    pub(super) async fn writable(&self) -> io::Result<AsyncFdReadyGuard<'_, Queue>> {
         self.0.writable().await
     }
 
@@ -50,7 +50,7 @@ impl TokioFd {
     }
 }
 
-impl AsyncWrite for TokioFd {
+impl AsyncWrite for TokioQueue {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -75,7 +75,7 @@ impl AsyncWrite for TokioFd {
     }
 }
 
-impl AsyncRead for TokioFd {
+impl AsyncRead for TokioQueue {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -99,16 +99,16 @@ impl AsyncRead for TokioFd {
     }
 }
 
-impl Opener for TokioFd {
+impl Opener for TokioQueue {
     fn open(req: &IfReq) -> Result<Self> {
-        let queue = Fd::open(req)?;
+        let queue = Queue::open(req)?;
         queue.set_non_blocking(true)?;
         let async_fd = AsyncFd::new(queue)?;
         Ok(Self(async_fd))
     }
 }
 
-impl Closer for TokioFd {
+impl Closer for TokioQueue {
     fn close(&mut self) -> Result<()> {
         self.0.get_mut().close()
     }

@@ -2,31 +2,61 @@
 # SPDX-License-Identifier: MIT
 
 ###
+# OS Determination
+###
+
+ifeq '$(findstring ;,$(PATH))' ';'
+    detected_OS := Windows
+else
+    detected_OS := $(shell uname 2>/dev/null || echo Unknown)
+    detected_OS := $(patsubst CYGWIN%,Cygwin,$(detected_OS))
+    detected_OS := $(patsubst MSYS%,MSYS,$(detected_OS))
+    detected_OS := $(patsubst MINGW%,MSYS,$(detected_OS))
+endif
+
+ifeq ($(detected_OS),Windows)
+    DEFAULT_OS := windows
+endif
+ifeq ($(detected_OS),Darwin)
+    DEFAULT_OS := darwin
+endif
+ifeq ($(detected_OS),Linux)
+    DEFAULT_OS := linux
+endif
+ifeq ($(detected_OS),FreeBSD)
+    DEFAULT_OS := freebsd
+endif
+ifeq ($(detected_OS),NetBSD)
+    DEFAULT_OS := netbsd
+endif
+
+
+###
 # Build args and variables.
 ###
 
-BUILD := debug
-HASH := $(shell git rev-parse HEAD)
-DEFAULT_OS := linux
-DEFAULT_ARCH := amd64
-DEFAULT_TARGET := $(DEFAULT_OS)-$(DEFAULT_ARCH)
+BUILD                   := debug
+HASH                    := $(shell git rev-parse HEAD)
+DEFAULT_ARCH            := amd64
+DEFAULT_TARGET          := $(DEFAULT_OS)-$(DEFAULT_ARCH)
 DEFAULT_EXAMPLES_ACTION := examples.$(DEFAULT_TARGET)
-DEFAULT_COMPILE_ACTION := compile.$(DEFAULT_TARGET)
+DEFAULT_COMPILE_ACTION  := compile.$(DEFAULT_TARGET)
 
 ###
 # Target and build definitions for varios OS/arch combinations
 ###
 
 # Define the resulting targets for building cross-platform
-target_linux-arm = armv7-unknown-linux-gnueabihf
-target_linux-arm64 = aarch64-unknown-linux-gnu
-target_linux-amd64 = x86_64-unknown-linux-gnu
-# TODO(csaide): Disabled for now need to fix cross platform builds.
-#
-# target_windows-amd64 = x86_64-pc-windows-msvc
-# target_windows-arm64 = aarch64-pc-windows-msvc
-# target_darwin-amd64 = x86_64-apple-darwin
-# target_darwin-arm64 = aarch64-apple-darwin
+target_linux-arm     = arm-unknown-linux-gnueabihf
+target_linux-armv7   = armv7-unknown-linux-gnueabihf
+target_linux-arm64   = aarch64-unknown-linux-gnu
+target_linux-amd64   = x86_64-unknown-linux-gnu
+target_freebsd-amd64 = x86_64-unknown-freebsd
+target_netbsd-amd64  = x86_64-unknown-netbsd
+target_windows-amd64 = x86_64-pc-windows-msvc
+target_windows-arm64 = aarch64-pc-windows-msvc
+target_darwin-amd64  = x86_64-apple-darwin
+target_darwin-arm64  = aarch64-apple-darwin
 
 # Define an override so that we can turn on/off release builds.
 build_debug =
@@ -37,18 +67,18 @@ build_release = --release
 ###
 
 .PHONY: default devel
-default: $(DEFAULT_COMPILE_ACTION) $(DEFAULT_EXAMPLES_ACTION)
-devel: check $(DEFAULT_COMPILE_ACTION) $(DEFAULT_EXAMPLES_ACTION)
+default: full
+devel: check full
 
 ###
 # Binary compilation steps.
 ###
 
-.PHONY: docs compile examples full compile.linux compile.windows compile.darwin examples.linux examples.windows examples.darwin
+.PHONY: docs compile examples full compile.linux compile.windows compile.darwin examples.linux examples.windows examples.darwin examples.netbsd examples.freebsd
 
 docs:
 	@bash ./dist/bin/print.sh "Generating Docs"
-	@cargo doc --no-deps --document-private-items
+	@cargo doc --no-deps
 
 examples.%:
 	@bash ./dist/bin/print.sh "Building examples: '$*' mode: '$(BUILD)'"
@@ -61,6 +91,7 @@ examples.%:
 examples.linux: \
 	examples.linux-amd64 \
 	examples.linux-arm64 \
+	examples.linux-armv7 \
 	examples.linux-arm
 
 examples.windows: \
@@ -71,6 +102,12 @@ examples.darwin: \
 	examples.darwin-amd64 \
 	examples.darwin-arm64
 
+examples.netbsd: \
+	examples.netbsd-amd64
+
+examples.freebsd: \
+	examples.netbsd-amd64
+
 examples: examples.$(DEFAULT_OS)
 
 compile.%:
@@ -80,6 +117,7 @@ compile.%:
 compile.linux: \
 	compile.linux-amd64 \
 	compile.linux-arm64 \
+	compile.linux-armv7 \
 	compile.linux-arm
 
 compile.windows: \
@@ -89,6 +127,12 @@ compile.windows: \
 compile.darwin: \
 	compile.darwin-amd64 \
 	compile.darwin-arm64
+
+compile.netbsd: \
+	compile.netbsd-amd64
+
+compile.freebsd: \
+	compile.freebsd-amd64
 
 compile: compile.$(DEFAULT_OS)
 
@@ -113,10 +157,6 @@ units:
 	@bash ./dist/bin/print.sh "Running tests"
 	@cargo test --target $(target_$(DEFAULT_TARGET))
 
-bench:
-	@bash ./dist/bin/print.sh "Running benchmarks"
-	@cargo bench --target $(target_$(DEFAULT_TARGET))
-
 coverage:
 	@bash ./dist/bin/print.sh "Running tests with coverage"
 	@mkdir -p target/coverage/
@@ -126,7 +166,25 @@ license:
 	@bash ./dist/bin/print.sh "Verifying licensing"
 	@bash ./dist/bin/lic-check.sh
 
-check: fmt lint units bench license
+check: fmt lint units license
+
+###
+# Package/Publish
+###
+
+.PHONY: package publish
+
+login:
+	@bash ./dist/bin/print.sh "Authorizing Cargo"
+	@cargo login $(CARGO_API_KEY)
+
+package:
+	@bash ./dist/bin/print.sh "Packaging"
+	@cargo package --allow-dirty
+
+publish:
+	@bash ./dist/bin/print.sh "Packaging"
+	@cargo publish
 
 ###
 # Cleanup
@@ -137,15 +195,14 @@ check: fmt lint units bench license
 clean:
 	@bash ./dist/bin/print.sh "Cleaning"
 	@rm -rf \
-		target/linux-arm64 \
-		target/linux-amd64 \
-		target/linux-arm \
 		target/doc \
 		target/debug \
 		target/release \
 		target/coverage \
 		target/criterion \
 		target/tarpaulin \
+		target/package \
+		target/arm-unknown-linux-gnueabihf \
 		target/x86_64-unknown-linux-gnu \
 		target/aarch64-unknown-linux-gnu \
 		target/armv7-unknown-linux-gnueabihf

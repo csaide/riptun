@@ -24,15 +24,15 @@ type PointerWidth = u16;
 
 /// A raw TUN/TAP queue wrapping all I/O for both sync and async operations.
 #[derive(Clone)]
-pub struct Fd(RawFd);
+pub struct Queue(RawFd);
 
-impl AsRawFd for Fd {
+impl AsRawFd for Queue {
     fn as_raw_fd(&self) -> RawFd {
         self.0
     }
 }
 
-impl Fd {
+impl Queue {
     /// Either enable or disable non-blocking mode on the underlying file descriptor.
     pub fn set_non_blocking(&self, on: bool) -> Result<()> {
         let flags =
@@ -81,6 +81,7 @@ impl Fd {
             Ok(read as usize)
         }
     }
+
     /// Read data from the underlying file descriptor into the supplied datagram, reading data from the hosts networking
     /// stack, using uninitialized memory.
     pub fn recv_uninit(&self, datagram: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
@@ -98,14 +99,14 @@ impl Fd {
     }
 }
 
-impl Read for Fd {
+impl Read for Queue {
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.recv(buf)
     }
 }
 
-impl Write for Fd {
+impl Write for Queue {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.send(buf)
@@ -118,7 +119,7 @@ impl Write for Fd {
     }
 }
 
-impl Opener for Fd {
+impl Opener for Queue {
     fn open(req: &req::IfReq) -> Result<Self> {
         let fd = unsafe { libc::open(PATH.as_ptr() as *const libc::c_char, libc::O_RDWR) };
         if fd < 0 {
@@ -136,7 +137,7 @@ impl Opener for Fd {
     }
 }
 
-impl Closer for Fd {
+impl Closer for Queue {
     fn close(&mut self) -> Result<()> {
         let ret = unsafe { libc::close(self.0) };
         if ret < 0 {
