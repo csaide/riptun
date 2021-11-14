@@ -1,2 +1,2 @@
 [toolchain]
-targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "armv7-unknown-linux-gnueabihf", "arm-unknown-linux-gnueabihf"]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "armv7-unknown-linux-gnueabihf", "armv7-unknown-linux-gnueabi", "arm-unknown-linux-gnueabihf", "arm-unknown-linux-gnueabi"]

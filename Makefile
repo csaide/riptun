@@ -47,8 +47,10 @@ DEFAULT_COMPILE_ACTION  := compile.$(DEFAULT_TARGET)
 ###
 
 # Define the resulting targets for building cross-platform
-target_linux-arm     = arm-unknown-linux-gnueabihf
-target_linux-armv7   = armv7-unknown-linux-gnueabihf
+target_linux-arm     = arm-unknown-linux-gnueabi
+target_linux-armhf   = arm-unknown-linux-gnueabihf
+target_linux-armv7   = armv7-unknown-linux-gnueabi
+target_linux-armv7hf = armv7-unknown-linux-gnueabihf
 target_linux-arm64   = aarch64-unknown-linux-gnu
 target_linux-amd64   = x86_64-unknown-linux-gnu
 target_freebsd-amd64 = x86_64-unknown-freebsd
@@ -91,7 +93,9 @@ examples.%:
 examples.linux: \
 	examples.linux-amd64 \
 	examples.linux-arm64 \
+	examples.linux-armv7hf \
 	examples.linux-armv7 \
+	examples.linux-armhf \
 	examples.linux-arm
 
 examples.windows: \
@@ -117,7 +121,9 @@ compile.%:
 compile.linux: \
 	compile.linux-amd64 \
 	compile.linux-arm64 \
+	compile.linux-armv7hf \
 	compile.linux-armv7 \
+	compile.linux-armhf \
 	compile.linux-arm
 
 compile.windows: \
@@ -203,6 +209,8 @@ clean:
 		target/tarpaulin \
 		target/package \
 		target/arm-unknown-linux-gnueabihf \
+		target/arm-unknown-linux-gnueabi \
 		target/x86_64-unknown-linux-gnu \
 		target/aarch64-unknown-linux-gnu \
-		target/armv7-unknown-linux-gnueabihf
+		target/armv7-unknown-linux-gnueabihf \
+		target/armv7-unknown-linux-gnueabi

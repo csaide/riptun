@@ -8,7 +8,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Install dev-tooling
 ENV TOOL_DEPS "curl wget telnet netcat net-tools dnsutils vim-tiny bash-completion sudo jq"
-ENV COMPILER_DEPS "gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf"
+ENV COMPILER_DEPS "gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-arm-linux-gnueabi"
 RUN apt-get update \
     && apt-get upgrade -yqq \
     && apt-get install -yqq \
@@ -23,7 +23,9 @@ RUN rustup component add rust-std \
     && rustup target add x86_64-unknown-linux-gnu \
     && rustup target add aarch64-unknown-linux-gnu \
     && rustup target add armv7-unknown-linux-gnueabihf \
+    && rustup target add armv7-unknown-linux-gnueabi \
     && rustup target add arm-unknown-linux-gnueabihf \
+    && rustup target add arm-unknown-linux-gnueabi \
     # TODO(csaide): Disabled for now need to fix cross platform builds.
     #
     # && rustup target add x86_64-pc-windows-msvc \
