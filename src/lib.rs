@@ -167,7 +167,9 @@
 //! | `x86_64-unknown-linux-gnu`      | ✅              | ✅               |
 //! | `aarch64-unknown-linux-gnu`     | ✅              | ✅               |
 //! | `armv7-unknown-linux-gnueabihf` | ✅              | ✅               |
+//! | `armv7-unknown-linux-gnueabi`   | ✅              | ✅               |
 //! | `arm-unknown-linux-gnueabihf`   | ✅              | ✅               |
+//! | `arm-unknown-linux-gnueabi`     | ✅              | ✅               |
 //! | `x86_64-pc-windows-msvc`        | ❌              | ❌               |
 //! | `aarch64-pc-windows-msvc`       | ❌              | ❌               |
 //! | `x86_64-apple-darwin`           | ❌              | ❌               |
