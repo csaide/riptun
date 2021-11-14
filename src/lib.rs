@@ -175,7 +175,11 @@
 //! | `x86_64-apple-darwin`           | ❌              | ❌               |
 //! | `aarch64-apple-darwin`          | ❌              | ❌               |
 //! | `x86_64-unknown-freebsd`        | ❌              | ❌               |
+//! | `aarch64-unknown-freebsd`       | ❌              | ❌               |
 //! | `x86_64-unknown-netbsd`         | ❌              | ❌               |
+//! | `aarch64-unknown-netbsd`        | ❌              | ❌               |
+//! | `x86_64-unknown-openbsd`        | ❌              | ❌               |
+//! | `aarch64-unknown-openbsd`       | ❌              | ❌               |
 //!
 
 use cfg_if::cfg_if;

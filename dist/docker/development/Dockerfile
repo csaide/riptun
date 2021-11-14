@@ -32,6 +32,12 @@ RUN rustup component add rust-std \
     # && rustup target add aarch64-pc-windows-msvc \
     # && rustup target add x86_64-apple-darwin \
     # && rustup target add aarch64-apple-darwin \
+    # && rustup target add x86_64-unknown-freebsd \
+    # && rustup target add aarch64-unknown-freebsd \
+    # && rustup target add x86_64-unknown-openbsd \
+    # && rustup target add aarch64-unknown-openbsd \
+    # && rustup target add x86_64-unknown-netbsd \
+    # && rustup target add aarch64-unknown-netbsd \
     && cargo install cargo-tarpaulin \
     && rustup update
 
