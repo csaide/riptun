@@ -4,18 +4,90 @@
 use super::*;
 
 use std::io;
+use std::ops::{Index, IndexMut, RangeBounds};
+use std::slice::{Iter, IterMut, SliceIndex};
+use std::vec::{Drain, IntoIter};
 
 use futures_util::future::select_all;
 
 /// An asynchronous virtual TUN device based on the tokio ecosystem.
-pub type TokioTun = Device<TokioQueue>;
+pub struct TokioTun {
+    queues: Vec<TokioQueue>,
+    name: String,
+}
 
 impl TokioTun {
+    /// Create a new async TUN device supporting the tokio ecosystem.
+    pub fn new(name: &str, num_queues: usize) -> Result<Self> {
+        if num_queues < 1 {
+            return Err(Error::InvalidNumQueues);
+        }
+
+        let (queues, name) = new_queues(name, num_queues)?;
+        Ok(Self { queues, name })
+    }
+
+    /// Return the OS determined name of this device.
+    #[inline]
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    /// Retrieve am immutable reference to the specified queue(s) if the suplied [SliceIndex] is inbounds.
+    #[inline]
+    pub fn get<I>(&self, index: I) -> Option<&I::Output>
+    where
+        I: SliceIndex<[TokioQueue]>,
+    {
+        self.queues.get(index)
+    }
+
+    /// Retrieve a mutable reference to the specified queue(s) if the suplied [SliceIndex] is inbounds.
+    #[inline]
+    pub fn get_mut<I>(&mut self, index: I) -> Option<&mut I::Output>
+    where
+        I: SliceIndex<[TokioQueue]>,
+    {
+        self.queues.get_mut(index)
+    }
+
+    /// Close the device destroying all internal queues.
+    /// NOTE: If `drain` is called its on the caller to cleanup the queues.
+    pub fn close(&mut self) -> Result<()> {
+        for mut queue in self.drain(..) {
+            queue.close()?;
+        }
+        Ok(())
+    }
+
+    /// Drain the internal queues, passing ownership of the queue and its lifecycle
+    /// to the caller. This is useful in certain scenarios where extreme control over
+    /// threading and I/O operations is desired.
+    #[inline]
+    pub fn drain<R>(&mut self, range: R) -> Drain<TokioQueue>
+    where
+        R: RangeBounds<usize>,
+    {
+        self.queues.drain(range)
+    }
+
+    /// Iterate over immutable instances internal queues.
+    #[inline]
+    pub fn iter(&self) -> Iter<TokioQueue> {
+        self.queues.iter()
+    }
+
+    /// Iterate over mutable instances of the internal queues.
+    #[inline]
+    pub fn iter_mut(&mut self) -> IterMut<TokioQueue> {
+        self.queues.iter_mut()
+    }
+
     /// Send a packet asynchronously to an available queue.
     pub async fn send(&self, datagram: &[u8]) -> io::Result<usize> {
         loop {
             // First collect all queue writable futures, pinning them as needed.
-            let futures = self.0.iter().map(|queue| Box::pin(queue.writable()));
+            let futures = self.iter().map(|queue| Box::pin(queue.writable()));
 
             // Select the first available queue to write to.
             let (result, _, _) = select_all(futures).await;
@@ -43,7 +115,7 @@ impl TokioTun {
         //
         // Then leverage the exposed async send on the queue to handle the heavy lifting.
         self.get(queue)
-            .map_err(|err| err.into_io())?
+            .ok_or_else(|| Error::InvalidQueue(queue).into_io())?
             .send(datagram)
             .await
     }
@@ -52,7 +124,7 @@ impl TokioTun {
     pub async fn recv(&self, datagram: &mut [u8]) -> io::Result<usize> {
         loop {
             // First collect all queue readable futures, pinning them as needed.
-            let futures = self.0.iter().map(|queue| Box::pin(queue.readable()));
+            let futures = self.iter().map(|queue| Box::pin(queue.readable()));
 
             // Select the first available queue with data to read.
             let (result, _, _) = select_all(futures).await;
@@ -80,8 +152,30 @@ impl TokioTun {
         //
         // Then leverage the exposed async recv on the queue to handle the heavy lifting.
         self.get(queue)
-            .map_err(|err| err.into_io())?
+            .ok_or_else(|| Error::InvalidQueue(queue).into_io())?
             .recv(datagram)
             .await
+    }
+}
+
+impl IntoIterator for TokioTun {
+    type Item = TokioQueue;
+    type IntoIter = IntoIter<TokioQueue>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.queues.into_iter()
+    }
+}
+
+impl Index<usize> for TokioTun {
+    type Output = TokioQueue;
+    fn index(&self, index: usize) -> &TokioQueue {
+        self.queues.index(index)
+    }
+}
+
+impl IndexMut<usize> for TokioTun {
+    fn index_mut(&mut self, index: usize) -> &mut TokioQueue {
+        self.queues.index_mut(index)
     }
 }

@@ -75,6 +75,17 @@ mod tests {
     }
 
     #[test]
+    fn test_long_name() {
+        let input = "aaaaaaaaaaaaaaaaaaaaaaaa";
+        let expected = "aaaaaaaaaaaaaaaa";
+        let req = IfReq::new(input);
+        assert!(req.is_ok());
+        let req = req.unwrap();
+        assert_eq!(IFF_FLAGS, req.flags);
+        assert_eq!(expected, req.name());
+    }
+
+    #[test]
     fn test_happy_path() {
         let req = IfReq::new("rip%d");
         assert!(req.is_ok());

@@ -13,21 +13,55 @@ use tokio::io::unix::AsyncFdReadyGuard;
 use tokio::io::ReadBuf;
 use tokio::io::{AsyncRead, AsyncWrite};
 
-/// An async wrapper around the [Queue] object leveraging the [tokio] ecosystem.
+/// An async wrapper around the [Queue] object leveraging the [AsyncFd] struct internally
+/// for async functionality within the `tokio` ecosystem.
+///
+/// This also implements both the [AsyncRead] and [AsyncWrite] enabling simple integration with the
+/// greater ecosystem.
 pub struct TokioQueue(AsyncFd<Queue>);
 
 impl TokioQueue {
+    /// Open a new async Queue based on the supplied [IfReq], exposing async capability for the
+    /// tokio ecosystem.
+    pub(crate) fn open(req: &IfReq) -> Result<Self> {
+        let queue = Queue::open(req)?;
+        queue.set_non_blocking(true)?;
+        let async_fd = AsyncFd::new(queue)?;
+        Ok(Self(async_fd))
+    }
+
+    /// Close the internal queue destroying this instance completely.
+    pub fn close(&mut self) -> Result<()> {
+        self.0.get_mut().close()
+    }
+
+    /// Wrapper around the internal [AsyncFd] structs [`AsyncFd::readable()`] call.
     #[inline]
-    pub(super) async fn readable(&self) -> io::Result<AsyncFdReadyGuard<'_, Queue>> {
+    pub async fn readable(&self) -> io::Result<AsyncFdReadyGuard<'_, Queue>> {
         self.0.readable().await
     }
 
+    /// Wrapper around the internal [AsyncFd] structs [`AsyncFd::writable()`] call.
     #[inline]
-    pub(super) async fn writable(&self) -> io::Result<AsyncFdReadyGuard<'_, Queue>> {
+    pub async fn writable(&self) -> io::Result<AsyncFdReadyGuard<'_, Queue>> {
         self.0.writable().await
     }
 
-    /// Asynchrounously read a datagram off the underlying queue.
+    /// Return a reference to the internal [Queue]. This is generally used, when it's necessary
+    /// to interact with the underlying [`Queue::recv()`] or [`Queue::send()`] methods.
+    #[inline]
+    pub fn get_ref(&self) -> &Queue {
+        self.0.get_ref()
+    }
+
+    /// Asynchrounously read a datagram off the underlying queue. Looping over [`Queue::recv()`] calls
+    /// using the [`AsyncFd::readable()`] + [`AsyncFdReadyGuard::try_io()`] calls waiting for either
+    /// data to be ready and successfully read into the supplied buffer, or an error other than
+    /// [`WouldBlock`][std::io::ErrorKind::WouldBlock] is encountered. Upon success the number of bytes
+    /// read is returned, which will be between `0` and the length of the supplied buffer.
+    ///
+    /// # Errors
+    /// On any error it should be assumed that no usable data was read into the buffer.
     pub async fn recv(&self, datagram: &mut [u8]) -> io::Result<usize> {
         loop {
             let mut guard = self.0.readable().await?;
@@ -38,7 +72,14 @@ impl TokioQueue {
         }
     }
 
-    /// Asynchrounously write a datagrom to the underlying queue.
+    /// Asynchrounously write a datagram to the underlying queue. Looping over [`Queue::send()`] calls
+    /// using the [`AsyncFd::writable()`] + [`AsyncFdReadyGuard::try_io()`] calls waiting for either data
+    /// to be ready and successfully sent from the supplied buffer, or an error other than
+    /// [`WouldBlock`][std::io::ErrorKind::WouldBlock] is encountered. Upon success the number of bytes
+    /// sent is returned, which will be between `0` and the length of the supplied buffer.
+    ///
+    /// # Errors
+    /// On any error it should be assumed that the buffer was partially sent.
     pub async fn send(&self, datagram: &[u8]) -> io::Result<usize> {
         loop {
             let mut guard = self.0.writable().await?;
@@ -66,6 +107,7 @@ impl AsyncWrite for TokioQueue {
     }
 
     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        // Flushing is a no-op on a char device.
         Poll::Ready(Ok(()))
     }
 
@@ -100,16 +142,8 @@ impl AsyncRead for TokioQueue {
 }
 
 impl Opener for TokioQueue {
+    #[inline]
     fn open(req: &IfReq) -> Result<Self> {
-        let queue = Queue::open(req)?;
-        queue.set_non_blocking(true)?;
-        let async_fd = AsyncFd::new(queue)?;
-        Ok(Self(async_fd))
-    }
-}
-
-impl Closer for TokioQueue {
-    fn close(&mut self) -> Result<()> {
-        self.0.get_mut().close()
+        Self::open(req)
     }
 }

@@ -78,15 +78,15 @@ devel: check full
 
 docs:
 	@bash ./dist/bin/print.sh "Generating Docs"
-	@cargo doc --no-deps
+	@cargo doc
 
 examples.%:
 	@bash ./dist/bin/print.sh "Building examples: '$*' mode: '$(BUILD)'"
-	@cargo build --target $(target_$*) --features async-mio-fd --example mio
-	@cargo build --target $(target_$*) --features async-smol-fd-example --example smol
-	@cargo build --target $(target_$*) --features async-std-fd-example --example std
-	@cargo build --target $(target_$*) --features async-tokio-fd-example --example tokio
-	@cargo build --target $(target_$*) --example sync
+	@cargo build --target $(target_$*) --no-default-features --features mio-impl --example mio
+	@cargo build --target $(target_$*) --no-default-features --features smol-example --example smol
+	@cargo build --target $(target_$*) --no-default-features --features async-std-example --example std
+	@cargo build --target $(target_$*) --no-default-features --features tokio-example --example tokio
+	@cargo build --target $(target_$*) --no-default-features --example sync
 
 examples.linux: \
 	examples.linux-amd64 \
