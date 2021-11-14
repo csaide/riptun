@@ -9,7 +9,7 @@ use std::{
     os::unix::prelude::{AsRawFd, RawFd},
 };
 
-use super::{req, Closer, Error, Opener, Result};
+use super::{Error, IfReq, Opener, Result};
 
 const PATH: &[u8] = b"/dev/net/tun\0";
 
@@ -33,16 +33,46 @@ impl AsRawFd for Queue {
 }
 
 impl Queue {
+    /// Open a new queue using the supplied [IfReq], exposing a synchronous blocking queue.
+    pub(crate) fn open(req: &IfReq) -> Result<Self> {
+        let fd = unsafe { libc::open(PATH.as_ptr() as *const libc::c_char, libc::O_RDWR) };
+        if fd < 0 {
+            return Err(Error::FS {
+                path: unsafe { String::from_utf8_unchecked(PATH.to_vec()) },
+                source: io::Error::last_os_error(),
+            });
+        }
+
+        let ret = unsafe { create_queue(fd, req as *const IfReq as PointerWidth)? };
+        if ret >= 1 {
+            return Err(Error::from(ret as i32));
+        }
+        Ok(Self(fd))
+    }
+
+    /// Close the internal queue destroying this instance completely.
+    pub fn close(&mut self) -> Result<()> {
+        let ret = unsafe { libc::close(self.0) };
+        if ret < 0 {
+            Err(Error::errno())
+        } else {
+            self.0 = -1;
+            Ok(())
+        }
+    }
+
     /// Either enable or disable non-blocking mode on the underlying file descriptor.
     pub fn set_non_blocking(&self, on: bool) -> Result<()> {
         let flags =
             nix::fcntl::fcntl(self.0, nix::fcntl::FcntlArg::F_GETFL).map_err(Error::from)?;
 
         let mut flags = OFlag::from_bits(flags).unwrap_or(OFlag::O_RDWR);
-        if on {
+        if on && !flags.contains(OFlag::O_NONBLOCK) {
             flags.insert(OFlag::O_NONBLOCK);
-        } else {
+        } else if !on && flags.contains(OFlag::O_NONBLOCK) {
             flags.remove(OFlag::O_NONBLOCK);
+        } else {
+            return Ok(());
         }
 
         nix::fcntl::fcntl(self.0, nix::fcntl::FcntlArg::F_SETFL(flags))
@@ -51,7 +81,14 @@ impl Queue {
     }
 
     /// Write the datagram to the underlying file descriptor injecting the data into the hosts networking
-    /// stack.
+    /// stack. This call wraps the raw [`libc::write()`] call returning the number of bytes written from the
+    /// buffer.
+    ///
+    /// In non-blocking mode this can and will return [`WouldBlock`][std::io::ErrorKind::WouldBlock] and that should
+    /// be used as an indication that the queue is not ready for sending data, and be re-polled for readiness.
+    ///
+    /// # Errors
+    /// On any error it should be assumed that the buffer was partially sent.
     pub fn send(&self, datagram: &[u8]) -> io::Result<usize> {
         let count = datagram.len();
         let written = unsafe {
@@ -67,7 +104,13 @@ impl Queue {
     }
 
     /// Read data from the underlying file descriptor into the supplied datagram, reading data from the hosts networking
-    /// stack.
+    /// stack. This call wraps the raw [`libc::read()`] call returning the number of bytes read into the supplied datagram.
+    ///
+    /// In non-blocking mode this can and will return [`WouldBlock`][std::io::ErrorKind::WouldBlock] and that should
+    /// be used as an indication that the queue is not ready for reading data, and be re-polled for readiness.
+    ///
+    /// # Errors
+    /// On any error it should be assumed that no usable data was read into the buffer.
     pub fn recv(&self, datagram: &mut [u8]) -> io::Result<usize> {
         let count = datagram.len();
         let read = unsafe {
@@ -83,7 +126,15 @@ impl Queue {
     }
 
     /// Read data from the underlying file descriptor into the supplied datagram, reading data from the hosts networking
-    /// stack, using uninitialized memory.
+    /// stack, using uninitialized memory. This call is analogous to the [`Queue::recv()`] function but allows for using
+    /// uninitialized memory buffers.
+    ///
+    /// # Safety
+    /// The caller should never use data in the supplied datagram that is greater than the returned read count. It is
+    /// undefined behavior to access that memory.
+    ///
+    /// # Errors
+    /// On any error it should be assumed that no usable data was read into the buffer.
     pub fn recv_uninit(&self, datagram: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
         let count = datagram.len();
         let read = unsafe {
@@ -120,31 +171,8 @@ impl Write for Queue {
 }
 
 impl Opener for Queue {
-    fn open(req: &req::IfReq) -> Result<Self> {
-        let fd = unsafe { libc::open(PATH.as_ptr() as *const libc::c_char, libc::O_RDWR) };
-        if fd < 0 {
-            return Err(Error::FS {
-                path: unsafe { String::from_utf8_unchecked(PATH.to_vec()) },
-                source: io::Error::last_os_error(),
-            });
-        }
-
-        let ret = unsafe { create_queue(fd, req as *const req::IfReq as PointerWidth)? };
-        if ret >= 1 {
-            return Err(Error::from(ret as i32));
-        }
-        Ok(Self(fd))
-    }
-}
-
-impl Closer for Queue {
-    fn close(&mut self) -> Result<()> {
-        let ret = unsafe { libc::close(self.0) };
-        if ret < 0 {
-            Err(Error::errno())
-        } else {
-            self.0 = -1;
-            Ok(())
-        }
+    #[inline]
+    fn open(req: &IfReq) -> Result<Self> {
+        Self::open(req)
     }
 }
