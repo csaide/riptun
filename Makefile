@@ -29,36 +29,45 @@ endif
 ifeq ($(detected_OS),NetBSD)
     DEFAULT_OS := netbsd
 endif
+ifeq ($(detected_OS),OpenBSD)
+    DEFAULT_OS := openbsd
+endif
 
 
 ###
 # Build args and variables.
 ###
 
-BUILD                   := debug
-HASH                    := $(shell git rev-parse HEAD)
-DEFAULT_ARCH            := amd64
-DEFAULT_TARGET          := $(DEFAULT_OS)-$(DEFAULT_ARCH)
-DEFAULT_EXAMPLES_ACTION := examples.$(DEFAULT_TARGET)
-DEFAULT_COMPILE_ACTION  := compile.$(DEFAULT_TARGET)
+.SECONDEXPANSION:
+BUILD := debug
 
 ###
 # Target and build definitions for varios OS/arch combinations
 ###
 
 # Define the resulting targets for building cross-platform
-target_linux-arm     = arm-unknown-linux-gnueabi
-target_linux-armhf   = arm-unknown-linux-gnueabihf
-target_linux-armv7   = armv7-unknown-linux-gnueabi
-target_linux-armv7hf = armv7-unknown-linux-gnueabihf
-target_linux-arm64   = aarch64-unknown-linux-gnu
-target_linux-amd64   = x86_64-unknown-linux-gnu
-target_freebsd-amd64 = x86_64-unknown-freebsd
-target_netbsd-amd64  = x86_64-unknown-netbsd
-target_windows-amd64 = x86_64-pc-windows-msvc
-target_windows-arm64 = aarch64-pc-windows-msvc
-target_darwin-amd64  = x86_64-apple-darwin
-target_darwin-arm64  = aarch64-apple-darwin
+target_linux := \
+	arm-unknown-linux-gnueabi \
+	arm-unknown-linux-gnueabihf \
+	armv7-unknown-linux-gnueabi \
+	armv7-unknown-linux-gnueabihf \
+	aarch64-unknown-linux-gnu \
+	x86_64-unknown-linux-gnu
+target_freebsd := \
+	x86_64-unknown-freebsd \
+	aarch64-unknown-freebsd
+target_netbsd := \
+	x86_64-unknown-netbsd \
+	aarch64-unknown-netbsd
+target_openbsd := \
+	x86_64-unknown-openbsd \
+	aarch64-unknown-openbsd
+target_windows := \
+	x86_64-pc-windows-msvc \
+	aarch64-pc-windows-msvc
+target_darwin := \
+	x86_64-apple-darwin \
+	aarch64-apple-darwin
 
 # Define an override so that we can turn on/off release builds.
 build_debug =
@@ -76,72 +85,57 @@ devel: check full
 # Binary compilation steps.
 ###
 
-.PHONY: docs compile examples full compile.linux compile.windows compile.darwin examples.linux examples.windows examples.darwin examples.netbsd examples.freebsd
+.PHONY: docs compile examples full
+.PHONY: compile.linux compile.windows compile.darwin compile.openbsd compile.netbsd compile.freebsd
+.PHONY: examples.linux examples.windows examples.darwin examples.openbsd examples.netbsd examples.freebsd
 
 docs:
 	@bash ./dist/bin/print.sh "Generating Docs"
 	@cargo doc
 
-examples.%:
+# Ensure we build each example with the appropriate limited set of features.
+examples-bin.%:
 	@bash ./dist/bin/print.sh "Building examples: '$*' mode: '$(BUILD)'"
-	@cargo build --target $(target_$*) --no-default-features --features mio-impl --example mio
-	@cargo build --target $(target_$*) --no-default-features --features smol-example --example smol
-	@cargo build --target $(target_$*) --no-default-features --features async-std-example --example std
-	@cargo build --target $(target_$*) --no-default-features --features tokio-example --example tokio
-	@cargo build --target $(target_$*) --no-default-features --example sync
+	@cargo build $(build_$(BUILD)) --target $* --no-default-features --features mio-impl --example mio
+	@cargo build $(build_$(BUILD)) --target $* --no-default-features --features smol-example --example smol
+	@cargo build $(build_$(BUILD)) --target $* --no-default-features --features async-std-example --example std
+	@cargo build $(build_$(BUILD)) --target $* --no-default-features --features tokio-example --example tokio
+	@cargo build $(build_$(BUILD)) --target $* --no-default-features --example sync
 
-examples.linux: \
-	examples.linux-amd64 \
-	examples.linux-arm64 \
-	examples.linux-armv7hf \
-	examples.linux-armv7 \
-	examples.linux-armhf \
-	examples.linux-arm
+# Build all targets for the given OS.
+examples-exp.%: $$(foreach target,$$(target_$$*),examples-bin.$$(target))
+	@bash ./dist/bin/print.sh "Finished building examples for OS: '$*' mode: '$(BUILD)'"
 
-examples.windows: \
-	examples.windows-amd64 \
-	examples.windows-arm64
-
-examples.darwin: \
-	examples.darwin-amd64 \
-	examples.darwin-arm64
-
-examples.netbsd: \
-	examples.netbsd-amd64
-
-examples.freebsd: \
-	examples.netbsd-amd64
-
+# By default build examples for the local OS, but in theory it should be possible to at least
+# compile cross-platform.
+examples.linux:   examples-exp.linux
+examples.windows: examples-exp.windows
+examples.darwin:  examples-exp.darwin
+examples.openbsd: examples-exp.openbsd
+examples.netbsd:  examples-exp.netbsd
+examples.freebsd: examples-exp.freebsd
 examples: examples.$(DEFAULT_OS)
 
-compile.%:
+# Ensure we compile each of the targets properly using the correct mode.
+compile-bin.%:
 	@bash ./dist/bin/print.sh "Building target: '$*' mode: '$(BUILD)'"
-	@cargo build $(build_$(BUILD)) --target $(target_$*)
+	@cargo build $(build_$(BUILD)) --target $*
 
-compile.linux: \
-	compile.linux-amd64 \
-	compile.linux-arm64 \
-	compile.linux-armv7hf \
-	compile.linux-armv7 \
-	compile.linux-armhf \
-	compile.linux-arm
+# Build all targets for the biven OS.
+compile-exp.%: $$(foreach target,$$(target_$$*),compile-bin.$$(target))
+	@bash ./dist/bin/print.sh "Finished building targets for OS: '$*' mode: '$(BUILD)'"
 
-compile.windows: \
-	compile.windows-amd64 \
-	compile.windows-arm64
-
-compile.darwin: \
-	compile.darwin-amd64 \
-	compile.darwin-arm64
-
-compile.netbsd: \
-	compile.netbsd-amd64
-
-compile.freebsd: \
-	compile.freebsd-amd64
-
+# By default build targets for the local OS, but in theory it should be possible to at least
+# compile cross-platform.
+compile.linux: compile-exp.linux
+compile.windows: compile-exp.windows
+compile.darwin: compile-exp.darwin
+compile.openbsd: compile-exp.openbsd
+compile.netbsd: compile-exp.netbsd
+compile.freebsd: compile-exp.freebsd
 compile: compile.$(DEFAULT_OS)
 
+# Default action to compile all targets + examples.
 full: compile examples
 
 ###
@@ -157,16 +151,16 @@ fmt:
 lint:
 	@bash ./dist/bin/print.sh "Linting"
 	@cargo fmt --all -- --check
-	@cargo clippy --target $(target_$(DEFAULT_TARGET)) -- --no-deps
+	@cargo clippy -- --no-deps
 
 units:
 	@bash ./dist/bin/print.sh "Running tests"
-	@cargo test --target $(target_$(DEFAULT_TARGET))
+	@cargo test
 
 coverage:
 	@bash ./dist/bin/print.sh "Running tests with coverage"
 	@mkdir -p target/coverage/
-	@cargo tarpaulin  -o Html --output-dir target/coverage/
+	@cargo tarpaulin -o Html --output-dir target/coverage/
 
 license:
 	@bash ./dist/bin/print.sh "Verifying licensing"
