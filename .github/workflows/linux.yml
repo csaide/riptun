@@ -67,7 +67,7 @@ jobs:
           path: cobertura.xml
 
   build-linux:
-    name: build (arm/aarch64/x86_64)
+    name: build (arm/armv7/aarch64/x86_64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -79,8 +79,8 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           override: true
       - name: Install compilers
-        run: sudo apt-get update -yqq && sudo apt-get install -yqq gcc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+        run: sudo apt-get update -yqq && sudo apt-get install -yqq gcc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-arm-linux-gnueabi
       - name: Cache
         uses: Swatinem/rust-cache@v1
       - name: Build
-        run: make compile
+        run: make full
