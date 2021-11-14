@@ -38,9 +38,6 @@ pub enum Error {
         #[from]
         source: io::Error,
     },
-    /// The specified I/O operation would have blocked.
-    #[error("I/O operation would have blocked")]
-    WouldBlock,
     /// The specified queue descriptor is invalid.
     #[error("invalid queue descriptor specified '{0}' is out of range")]
     InvalidQueue(usize),
@@ -71,7 +68,6 @@ impl Error {
         match self {
             Self::FS { source, .. } => source,
             Self::IO { source } => source,
-            Self::WouldBlock => std::io::Error::new(ErrorKind::WouldBlock, self),
             Self::Unix { source } => std::io::Error::from_raw_os_error(source as i32),
             err => std::io::Error::new(ErrorKind::Other, err),
         }
@@ -92,9 +88,6 @@ impl From<usize> for Error {
 
 impl From<nix::errno::Errno> for Error {
     fn from(e: nix::errno::Errno) -> Self {
-        match e {
-            nix::errno::Errno::EAGAIN => Self::WouldBlock,
-            e => Self::Unix { source: e },
-        }
+        Self::Unix { source: e }
     }
 }

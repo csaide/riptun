@@ -35,17 +35,17 @@ smol = { version = "1.2.5", optional = true }
 
 [features]
 # Default feature set is to enable all async capabilities.
-default = ["async-mio-fd", "async-std-fd", "async-tokio-fd"]
+default = ["mio-impl", "async-std-impl", "tokio-impl"]
 
 # Enable/disable individual async implementations.
-async-mio-fd = ["mio"]
-async-std-fd = ["async-io", "futures-util", "futures-io"]
-async-tokio-fd = ["tokio", "futures-util", "futures-io"]
+mio-impl = ["mio"]
+async-std-impl = ["async-io", "futures-util", "futures-io"]
+tokio-impl = ["tokio", "futures-util", "futures-io"]
 
 # Strictly for examples.
-async-std-fd-example = ["async-std/attributes", "async-std/default", "async-std-fd", ]
-async-tokio-fd-example = ["tokio/full", "async-tokio-fd"]
-async-smol-fd-example = ["smol", "async-std-fd"]
+async-std-example = ["async-std/attributes", "async-std/default", "async-std-impl", ]
+tokio-example = ["tokio/rt", "tokio/rt-multi-thread", "tokio/macros", "tokio-impl"]
+smol-example = ["smol", "async-std-impl"]
 
 [[example]]
 name = "sync"
@@ -55,19 +55,19 @@ required-features = []
 [[example]]
 name = "mio"
 path = "examples/mio.rs"
-required-features = ["async-mio-fd"]
+required-features = ["mio-impl"]
 
 [[example]]
 name = "smol"
 path = "examples/smol.rs"
-required-features = ["async-smol-fd-example"]
+required-features = ["smol-example"]
 
 [[example]]
 name = "std"
 path = "examples/std.rs"
-required-features = ["async-std-fd-example"]
+required-features = ["async-std-example"]
 
 [[example]]
 name = "tokio"
 path = "examples/tokio.rs"
-required-features = ["async-tokio-fd-example"]
+required-features = ["tokio-example"]

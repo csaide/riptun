@@ -9,7 +9,7 @@ const NUM_QUEUES: usize = 5;
 
 #[tokio::main]
 pub async fn main() {
-    let (async_dev, name) = match TokioTun::new("rip%d", NUM_QUEUES) {
+    let async_dev = match TokioTun::new("rip%d", NUM_QUEUES) {
         Ok(async_dev) => async_dev,
         Err(err) => {
             println!("[ERROR] => {}", err);
@@ -17,7 +17,7 @@ pub async fn main() {
         }
     };
 
-    println!("[INFO] => Created new virtual device: {}", name);
+    println!("[INFO] => Created new virtual device: {}", async_dev.name());
 
     let mut handles = Vec::with_capacity(NUM_QUEUES);
     let async_dev = Arc::new(async_dev);

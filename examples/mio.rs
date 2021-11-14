@@ -14,12 +14,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut poll = Poll::new()?;
     let mut events = Events::with_capacity(128);
 
-    let (mut sync, name) = match Tun::new("rip%d", NUM_QUEUES) {
+    let mut sync = match Tun::new("rip%d", NUM_QUEUES) {
         Ok(sync) => sync,
         Err(err) => return Err(Box::new(err)),
     };
 
-    println!("[INFO] => Created new virtual device: {}", name);
+    println!("[INFO] => Created new virtual device: {}", sync.name());
 
     let mut queues: HashMap<Token, Queue> = HashMap::with_capacity(NUM_QUEUES);
     for (idx, mut queue) in sync.drain(..).enumerate() {
