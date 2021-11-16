@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         // Poll Mio for events, blocking until we get an event.
         poll.poll(&mut events, None)?;
 
-        let mut buffer: [u8; 65535] = [0x00; 65535];
+        let mut buffer: [u8; 1500] = [0x00; 1500];
 
         // Process each event.
         for event in events.iter() {

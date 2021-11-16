@@ -1,15 +1,13 @@
 // (c) Copyright 2021 Christian Saide
 // SPDX-License-Identifier: MIT
 
+use super::{Error, IfReq, Opener, Result};
+
 use nix::{fcntl::OFlag, libc};
 
-use std::{
-    io::{self, Read, Write},
-    mem::MaybeUninit,
-    os::unix::prelude::{AsRawFd, RawFd},
-};
-
-use super::{Error, IfReq, Opener, Result};
+use std::io::{self, Read, Write};
+use std::mem::MaybeUninit;
+use std::os::unix::prelude::{AsRawFd, RawFd};
 
 const PATH: &[u8] = b"/dev/net/tun\0";
 
@@ -25,12 +23,6 @@ type PointerWidth = u16;
 /// A raw TUN/TAP queue wrapping all I/O for both sync and async operations.
 #[derive(Clone)]
 pub struct Queue(RawFd);
-
-impl AsRawFd for Queue {
-    fn as_raw_fd(&self) -> RawFd {
-        self.0
-    }
-}
 
 impl Queue {
     /// Open a new queue using the supplied [IfReq], exposing a synchronous blocking queue.
@@ -111,18 +103,9 @@ impl Queue {
     ///
     /// # Errors
     /// On any error it should be assumed that no usable data was read into the buffer.
+    #[inline]
     pub fn recv(&self, datagram: &mut [u8]) -> io::Result<usize> {
-        let count = datagram.len();
-        let read = unsafe {
-            let ptr = datagram.as_mut_ptr();
-            libc::read(self.0, ptr as *mut libc::c_void, count)
-        };
-
-        if read < 0 {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(read as usize)
-        }
+        unsafe { self.recv_int(datagram.as_mut_ptr(), datagram.len()) }
     }
 
     /// Read data from the underlying file descriptor into the supplied datagram, reading data from the hosts networking
@@ -130,23 +113,28 @@ impl Queue {
     /// uninitialized memory buffers.
     ///
     /// # Safety
-    /// The caller should never use data in the supplied datagram that is greater than the returned read count. It is
-    /// undefined behavior to access that memory.
+    /// The caller should never use data in the supplied datagram that is greater than the returned read count.
     ///
     /// # Errors
     /// On any error it should be assumed that no usable data was read into the buffer.
+    #[inline]
     pub fn recv_uninit(&self, datagram: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
-        let count = datagram.len();
-        let read = unsafe {
-            let ptr = datagram.as_mut_ptr();
-            libc::read(self.0, ptr as *mut libc::c_void, count)
-        };
+        unsafe { self.recv_int(datagram.as_mut_ptr(), datagram.len()) }
+    }
 
+    unsafe fn recv_int<T>(&self, ptr: *mut T, count: usize) -> io::Result<usize> {
+        let read = libc::read(self.0, ptr as *mut libc::c_void, count);
         if read < 0 {
             Err(io::Error::last_os_error())
         } else {
             Ok(read as usize)
         }
+    }
+}
+
+impl AsRawFd for Queue {
+    fn as_raw_fd(&self) -> RawFd {
+        self.0
     }
 }
 

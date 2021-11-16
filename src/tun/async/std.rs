@@ -10,14 +10,17 @@ use std::vec::{Drain, IntoIter};
 
 use futures_util::future::select_all;
 
-/// An asynchronous virtual TUN device based on the async-std/smol ecosystems.
+/// An asynchronous virtual TUN device based on the `async-std`/`smol` ecosystems.
 pub struct AsyncStdTun {
     queues: Vec<AsyncStdQueue>,
     name: String,
 }
 
 impl AsyncStdTun {
-    /// Create a new async TUN device supporting the async-std/smol ecosystems.
+    /// Create a new multi-queue async Tun device, supporting the `async-std`/`smol` ecosystems,
+    /// using the specified name and number of queues. The name parameter can be augmented with `%d`
+    /// to denote a OS determined incrementing ID to assign this device. To get the real device
+    /// name call [`TokioTun::name()`].
     pub fn new(name: &str, num_queues: usize) -> Result<Self> {
         if num_queues < 1 {
             return Err(Error::InvalidNumQueues);
@@ -33,20 +36,22 @@ impl AsyncStdTun {
         self.name.as_str()
     }
 
-    /// Retrieve am immutable reference to the specified queue(s) if the suplied [SliceIndex] is inbounds.
+    /// Retrieve an immutable reference to the specified [AsyncStdQueue] if the suplied [SliceIndex]
+    /// is inbounds.
     #[inline]
-    pub fn get<I>(&self, index: I) -> Option<&I::Output>
+    pub fn get<I>(&self, index: I) -> Option<&AsyncStdQueue>
     where
-        I: SliceIndex<[AsyncStdQueue]>,
+        I: SliceIndex<[AsyncStdQueue], Output = AsyncStdQueue>,
     {
         self.queues.get(index)
     }
 
-    /// Retrieve a mutable reference to the specified queue(s) if the suplied [SliceIndex] is inbounds.
+    /// Retrieve a mutable reference to the specified [AsyncStdQueue] if the suplied [SliceIndex] is
+    /// inbounds.
     #[inline]
-    pub fn get_mut<I>(&mut self, index: I) -> Option<&mut I::Output>
+    pub fn get_mut<I>(&mut self, index: I) -> Option<&mut AsyncStdQueue>
     where
-        I: SliceIndex<[AsyncStdQueue]>,
+        I: SliceIndex<[AsyncStdQueue], Output = AsyncStdQueue>,
     {
         self.queues.get_mut(index)
     }
@@ -71,19 +76,21 @@ impl AsyncStdTun {
         self.queues.drain(range)
     }
 
-    /// Iterate over immutable instances internal queues.
+    /// Iterate over immutable instances internal [AsyncStdQueue] instances.
     #[inline]
     pub fn iter(&self) -> Iter<AsyncStdQueue> {
         self.queues.iter()
     }
 
-    /// Iterate over mutable instances of the internal queues.
+    /// Iterate over mutable instances of the internal [AsyncStdQueue] instances.
     #[inline]
     pub fn iter_mut(&mut self) -> IterMut<AsyncStdQueue> {
         self.queues.iter_mut()
     }
 
-    /// Send a packet asynchronously to an available queue.
+    /// Send a packet asynchronously to an available queue. This method handles collecting
+    /// all of the [`AsyncStdQueue::writable()`] futures. Then leverages [`select_all`][futures_util::future::select_all]
+    /// to await the first available queue to send the datagram via.
     pub async fn send(&self, datagram: &[u8]) -> io::Result<usize> {
         loop {
             // First collect all queue writable futures, pinning them as needed.
@@ -111,7 +118,12 @@ impl AsyncStdTun {
         }
     }
 
-    /// Send a packet asynchronously to the specified queue.
+    /// Send a packet asynchronously via the specified TUN queue, see the [`AsyncStdQueue::send()`]
+    /// documentation for more details.
+    ///
+    /// # Errors
+    /// General I/O errors are possible, along with a [Error::InvalidQueue] if the specified
+    /// queue is out of range for this device.
     pub async fn send_via(&self, queue: usize, datagram: &[u8]) -> io::Result<usize> {
         // Since we have a specific queue lets just retrieve the specified queue, erroring
         // if the specified queue is out of range.
@@ -123,7 +135,9 @@ impl AsyncStdTun {
             .await
     }
 
-    /// Receive a packet asynchronously from an available queue.
+    /// Receive a packet asynchronously from an available queue. This method handles collecting
+    /// all of the [`AsyncStdQueue::readable()`] futures. Then leverages [`select_all`] to await the
+    /// first available queue to send the datagram via.
     pub async fn recv(&self, datagram: &mut [u8]) -> io::Result<usize> {
         loop {
             // First collect all queue readable futures, pinning them as needed.
@@ -150,7 +164,12 @@ impl AsyncStdTun {
         }
     }
 
-    /// Receive a packet asynchronously from the specified queue.
+    /// Receive a packet asynchronously from the specified TUN queue, see the [`AsyncStdQueue::recv()`]
+    /// documentation for more details.
+    ///
+    /// # Errors
+    /// General I/O errors are possible, along with a [Error::InvalidQueue] if the specified
+    /// queue is out of range for this device.
     pub async fn recv_via(&self, queue: usize, datagram: &mut [u8]) -> io::Result<usize> {
         // Since we have a specific queue lets just retrieve the specified queue, erroring
         // if the specified queue is out of range.

@@ -10,14 +10,17 @@ use std::vec::{Drain, IntoIter};
 
 use futures_util::future::select_all;
 
-/// An asynchronous virtual TUN device based on the tokio ecosystem.
+/// An asynchronous virtual TUN device based on the `tokio` ecosystem.
 pub struct TokioTun {
     queues: Vec<TokioQueue>,
     name: String,
 }
 
 impl TokioTun {
-    /// Create a new async TUN device supporting the tokio ecosystem.
+    /// Create a new multi-queue async Tun device, supporting the `tokio` ecosystem, using the
+    /// specified name and number of queues. The name parameter can be augmented with `%d` to
+    /// denote a OS determined incrementing ID to assign this device. To get the real device
+    /// name call [`TokioTun::name()`].
     pub fn new(name: &str, num_queues: usize) -> Result<Self> {
         if num_queues < 1 {
             return Err(Error::InvalidNumQueues);
@@ -33,7 +36,7 @@ impl TokioTun {
         self.name.as_str()
     }
 
-    /// Retrieve am immutable reference to the specified queue(s) if the suplied [SliceIndex] is inbounds.
+    /// Retrieve an immutable reference to the specified queue(s) if the suplied [SliceIndex] is inbounds.
     #[inline]
     pub fn get<I>(&self, index: I) -> Option<&I::Output>
     where
@@ -83,7 +86,9 @@ impl TokioTun {
         self.queues.iter_mut()
     }
 
-    /// Send a packet asynchronously to an available queue.
+    /// Send a packet asynchronously to an available queue. This method handles collecting
+    /// all of the [`TokioQueue::writable()`] futures. Then leverages [`select_all()`] to await the
+    /// first available queue to send the datagram via.
     pub async fn send(&self, datagram: &[u8]) -> io::Result<usize> {
         loop {
             // First collect all queue writable futures, pinning them as needed.
@@ -108,7 +113,12 @@ impl TokioTun {
         }
     }
 
-    /// Send a packet asynchronously to the specified queue.
+    /// Send a packet asynchronously via the specified TUN queue, see the [`TokioQueue::send()`]
+    /// documentation for more details.
+    ///
+    /// # Errors
+    /// General I/O errors are possible, along with a [Error::InvalidQueue] if the specified
+    /// queue is out of range for this device.
     pub async fn send_via(&self, queue: usize, datagram: &[u8]) -> io::Result<usize> {
         // Since we have a specific queue lets just retrieve the specified queue, erroring
         // if the specified queue is out of range.
@@ -120,7 +130,9 @@ impl TokioTun {
             .await
     }
 
-    /// Receive a packet asynchronously from an available queue.
+    /// Receive a packet asynchronously from an available queue. This method handles collecting
+    /// all of the [`TokioQueue::readable()`] futures. Then leverages [`select_all()`] to await the
+    /// first available queue to send the datagram via.
     pub async fn recv(&self, datagram: &mut [u8]) -> io::Result<usize> {
         loop {
             // First collect all queue readable futures, pinning them as needed.
@@ -145,7 +157,12 @@ impl TokioTun {
         }
     }
 
-    /// Receive a packet asynchronously from the specified queue.
+    /// Receive a packet asynchronously from the specified TUN queue, see the [`TokioQueue::recv()`]
+    /// documentation for more details.
+    ///
+    /// # Errors
+    /// General I/O errors are possible, along with a [Error::InvalidQueue] if the specified
+    /// queue is out of range for this device.
     pub async fn recv_via(&self, queue: usize, datagram: &mut [u8]) -> io::Result<usize> {
         // Since we have a specific queue lets just retrieve the specified queue, erroring
         // if the specified queue is out of range.

@@ -31,6 +31,7 @@ impl TokioQueue {
     }
 
     /// Close the internal queue destroying this instance completely.
+    #[inline]
     pub fn close(&mut self) -> Result<()> {
         self.0.get_mut().close()
     }

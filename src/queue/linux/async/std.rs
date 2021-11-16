@@ -27,6 +27,7 @@ impl AsyncStdQueue {
     }
 
     /// Close the internal queue destroying this instance completely.
+    #[inline]
     pub fn close(&mut self) -> Result<()> {
         self.0.get_mut().close()
     }
@@ -53,11 +54,11 @@ impl AsyncStdQueue {
     /// Asynchrounously read a datagram off the underlying queue. Looping over [`Queue::recv()`] calls
     /// using the [`Async::read_with()`] call waiting for either data to be ready and successfully read
     /// into the supplied buffer, or an error other than [`WouldBlock`][std::io::ErrorKind::WouldBlock]
-    /// is encountered. Upon success the number of bytes read is returned, which will be between `0` and
-    /// the length of the supplied buffer.
+    /// is encountered. Upon success the number of bytes read is returned.
     ///
     /// # Errors
     /// On any error it should be assumed that no usable data was read into the buffer.
+    #[inline]
     pub async fn recv(&self, datagram: &mut [u8]) -> io::Result<usize> {
         self.0.read_with(|queue| queue.recv(datagram)).await
     }
@@ -70,40 +71,42 @@ impl AsyncStdQueue {
     ///
     /// # Errors
     /// On any error it should be assumed that the buffer was partially sent.
+    #[inline]
     pub async fn send(&self, datagram: &[u8]) -> io::Result<usize> {
         self.0.write_with(|queue| queue.send(datagram)).await
     }
 }
 
 impl AsyncWrite for AsyncStdQueue {
+    #[inline]
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
-        let inner = Pin::new(&mut self.get_mut().0);
-        inner.poll_write(cx, buf)
+        Pin::new(&mut self.get_mut().0).poll_write(cx, buf)
     }
 
+    #[inline]
     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
         // Flushing is a no-op on a char device.
         Poll::Ready(Ok(()))
     }
 
+    #[inline]
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        let inner = Pin::new(&mut self.get_mut().0);
-        inner.poll_close(cx)
+        Pin::new(&mut self.get_mut().0).poll_close(cx)
     }
 }
 
 impl AsyncRead for AsyncStdQueue {
+    #[inline]
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> std::task::Poll<io::Result<usize>> {
-        let inner = Pin::new(&mut self.get_mut().0);
-        inner.poll_read(cx, buf)
+        Pin::new(&mut self.get_mut().0).poll_read(cx, buf)
     }
 }
 
