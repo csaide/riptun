@@ -186,6 +186,7 @@ impl IntoIterator for AsyncStdTun {
     type Item = AsyncStdQueue;
     type IntoIter = IntoIter<AsyncStdQueue>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.queues.into_iter()
     }
@@ -193,12 +194,15 @@ impl IntoIterator for AsyncStdTun {
 
 impl Index<usize> for AsyncStdTun {
     type Output = AsyncStdQueue;
+
+    #[inline]
     fn index(&self, index: usize) -> &AsyncStdQueue {
         self.queues.index(index)
     }
 }
 
 impl IndexMut<usize> for AsyncStdTun {
+    #[inline]
     fn index_mut(&mut self, index: usize) -> &mut AsyncStdQueue {
         self.queues.index_mut(index)
     }

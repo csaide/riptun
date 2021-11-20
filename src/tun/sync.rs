@@ -113,6 +113,7 @@ impl IntoIterator for Tun {
     type Item = Queue;
     type IntoIter = IntoIter<Queue>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.queues.into_iter()
     }
@@ -120,12 +121,15 @@ impl IntoIterator for Tun {
 
 impl Index<usize> for Tun {
     type Output = Queue;
+
+    #[inline]
     fn index(&self, index: usize) -> &Queue {
         self.queues.index(index)
     }
 }
 
 impl IndexMut<usize> for Tun {
+    #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Queue {
         self.queues.index_mut(index)
     }

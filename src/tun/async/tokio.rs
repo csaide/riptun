@@ -179,6 +179,7 @@ impl IntoIterator for TokioTun {
     type Item = TokioQueue;
     type IntoIter = IntoIter<TokioQueue>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.queues.into_iter()
     }
@@ -186,12 +187,15 @@ impl IntoIterator for TokioTun {
 
 impl Index<usize> for TokioTun {
     type Output = TokioQueue;
+
+    #[inline]
     fn index(&self, index: usize) -> &TokioQueue {
         self.queues.index(index)
     }
 }
 
 impl IndexMut<usize> for TokioTun {
+    #[inline]
     fn index_mut(&mut self, index: usize) -> &mut TokioQueue {
         self.queues.index_mut(index)
     }
