@@ -172,7 +172,7 @@ check: fmt lint units license
 # Package/Publish
 ###
 
-.PHONY: package publish
+.PHONY: login package publish publish-ci
 
 login:
 	@bash ./dist/bin/print.sh "Authorizing Cargo"
