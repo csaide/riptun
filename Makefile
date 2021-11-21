@@ -183,8 +183,12 @@ package:
 	@cargo package --allow-dirty
 
 publish:
-	@bash ./dist/bin/print.sh "Packaging"
+	@bash ./dist/bin/print.sh "Publishing"
 	@cargo publish
+
+publish-ci:
+	@bash ./dist/bin/print.sh "Publishing"
+	@cargo --token $(CARGO_API_KEY) publish
 
 ###
 # Cleanup
