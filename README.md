@@ -25,7 +25,7 @@ will be replaced with an appropriate value by the OS. The exact device name alon
 actual TUN device is then returned for use. We then loop forever reading packets and printing
 them to stdout:
 
-```no_run
+```rust
 use riptun::Tun;
 
 // First lets create a new single queue tun.
