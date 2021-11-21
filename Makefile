@@ -188,7 +188,7 @@ publish:
 
 publish-ci:
 	@bash ./dist/bin/print.sh "Publishing"
-	@cargo --token $(CARGO_API_KEY) publish
+	@cargo publish --token "$(CARGO_API_KEY)"
 
 ###
 # Cleanup
