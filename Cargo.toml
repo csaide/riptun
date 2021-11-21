@@ -1,6 +1,6 @@
 [package]
 name = "riptun"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2018"
 description = "riptun is a cross platform library for creating, managing, and leveraging both sync and async TUN/TAP devices."
 license = "MIT"
